@@ -7,7 +7,7 @@ RUN CGO_ENABLED=0 GOOS=linux go build -mod=mod -tags osusergo,netgo \
         -ldflags "-X main.gitVersion=${EXEUNTU_GIT_VERSION} -extldflags=-static -s -w" \
         -o /out/exeuntu .
 
-FROM ubuntu:24.04
+FROM ubuntu:26.10
 
 # pbuntu — personal fork of exeuntu (ghcr.io/danruto/pbuntu)
 LABEL "exe.dev/login-user"="exedev"
@@ -16,17 +16,12 @@ LABEL "exe.dev/install-shelley"="true"
 # Switch from dash to bash by default.
 SHELL ["/bin/bash", "-euxo", "pipefail", "-c"]
 
-
 # Remove minimization restrictions and install packages with documentation
 # We aim for a usable non-minimal system.
+# 26.10 base image is not minimized (unlike 24.04) — docs/man pages already present.
 RUN sed -i 's|http://archive.ubuntu.com/ubuntu/|http://mirror://mirrors.ubuntu.com/mirrors.txt|' /etc/apt/sources.list && \
         rm -f /etc/dpkg/dpkg.cfg.d/excludes /etc/dpkg/dpkg.cfg.d/01_nodoc && \
 	apt-get update && \
-	# Pull in all available security/bugfix updates for packages already
-	# in the base ubuntu:24.04 image. Without this we ship whatever was
-	# current when Canonical last rebuilt the base layer, which can be
-	# months behind (e.g. nginx Rift, CVE-2026-42945). The weekly cron
-	# rebuild + no-cache will keep this fresh going forward.
 	DEBIAN_FRONTEND=noninteractive apt-get -y \
 		-o Dpkg::Options::=--force-confold \
 		-o Dpkg::Options::=--force-confdef \
@@ -35,12 +30,6 @@ RUN sed -i 's|http://archive.ubuntu.com/ubuntu/|http://mirror://mirrors.ubuntu.c
 	echo 'debconf debconf/frontend select Noninteractive' | debconf-set-selections && \
 	# Pre-configure pbuilder to avoid mirror prompt
 	echo 'pbuilder pbuilder/mirrorsite string http://archive.ubuntu.com/ubuntu' | debconf-set-selections && \
-	# Run unminimize with single 'y' response to restore documentation
-	echo 'y' | DEBIAN_FRONTEND=noninteractive unminimize && \
-	# Install man-db and reinstall all base packages to get their man pages back
-	DEBIAN_FRONTEND=noninteractive apt-get install -y man-db && \
-	DEBIAN_FRONTEND=noninteractive apt-get install -y --reinstall $(dpkg-query -f '${binary:Package} ' -W) && \
-	mandb -c && \
 	DEBIAN_FRONTEND=noninteractive apt-get install -y \
 		ca-certificates wget ripgrep \
 		locales locales-all \
@@ -55,13 +44,12 @@ RUN sed -i 's|http://archive.ubuntu.com/ubuntu/|http://mirror://mirrors.ubuntu.c
 		mitmproxy \
 		systemd systemd-sysv \
 		btop \
-		git \
 		fontconfig fonts-noto-color-emoji \
 		docker.io docker-buildx docker-compose-v2 \
 		bubblewrap \
 		gh \
 		dbus-user-session \
-		&& apt-get remove -y pollinate ubuntu-fan && \
+		&& apt-get remove -y pollinate ubuntu-fan || true && \
 		# openssh-server generates host keys during package configuration.
 		# Do not bake those per-image private keys into exeuntu.
 		rm -f /etc/ssh/ssh_host_*_key /etc/ssh/ssh_host_*_key.pub && \
@@ -218,6 +206,8 @@ RUN usermod -l exedev -c "exe.dev user" ubuntu && \
 	sed -i 's/^ubuntu:/exedev:/' /etc/subuid /etc/subgid && \
 	echo 'exedev ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers && \
 	echo 'Defaults:exedev verifypw=any' >> /etc/sudoers && \
+	# overlayfs copy-up may change ownership; fix it
+	chown -R exedev:exedev /home/exedev && \
 	# Manually enable linger, this should autopopulate /run/user/1000
 	mkdir -p /var/lib/systemd/linger && \
 	touch /var/lib/systemd/linger/exedev
