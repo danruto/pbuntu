@@ -56,7 +56,7 @@ RUN sed -i 's|http://archive.ubuntu.com/ubuntu/|http://mirror://mirrors.ubuntu.c
 		systemd systemd-sysv \
 		btop \
 		git \
-		fonts-noto-color-emoji \
+		fontconfig fonts-noto-color-emoji \
 		docker.io docker-buildx docker-compose-v2 \
 		bubblewrap \
 		gh \
