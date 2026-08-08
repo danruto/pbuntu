@@ -27,7 +27,9 @@ jobs:
         with:
           context: .
           push: true
-          tags: ghcr.io/danruto/pbuntu:latest
+          tags: |
+            ghcr.io/danruto/pbuntu:latest
+            ghcr.io/danruto/pbuntu:${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -46,13 +48,14 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      - name: Pull base image
-        run: docker pull ghcr.io/danruto/pbuntu:latest
       - uses: docker/build-push-action@v6
         with:
           context: .
           file: variants/${{ matrix.variant }}.Dockerfile
           push: true
-          tags: ghcr.io/danruto/pbuntu:${{ matrix.variant }}
+          pull: true
+          tags: |
+            ghcr.io/danruto/pbuntu:${{ matrix.variant }}
+            ghcr.io/danruto/pbuntu:${{ matrix.variant }}-${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
