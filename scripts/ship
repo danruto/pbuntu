@@ -1,0 +1,83 @@
+#!/usr/bin/env bash
+# ship — build an OCI image, push to an exe.dev-hosted registry, and boot a VM.
+#
+# Run from any app repo. The current directory must contain a Dockerfile.
+# Use -C <dir> to run from a different directory.
+#
+# One-time setup: create a registry VM (only needed once).
+#   ship registry-create
+#
+# Deploy:
+#   cd ~/dev/myapp && ship myapp v2       # from inside the repo
+#   ship -C ~/dev/myapp myapp v2          # or point at it
+#   ship myapp v2 myapp-prod              # custom VM name
+#
+# Override the registry hostname:
+#   REGISTRY=my-registry.exe.xyz ./scripts/ship myapp v2
+#
+set -euo pipefail
+
+REGISTRY="${REGISTRY:-pb-registry.exe.xyz}"
+DOCKERFILE="${DOCKERFILE:-Dockerfile}"
+WORKDIR="."
+
+usage() {
+    echo "Usage: $0 [-C <dir>] <app> <tag> [vmname]"
+    echo "       $0 registry-create"
+    echo ""
+    echo "  -C <dir>         run from this directory (default: current)"
+    echo "  app              image name (e.g. myapp)"
+    echo "  tag              version tag (e.g. v2)"
+    echo "  vmname           exe.dev VM name (default: <app>-<tag>)"
+    exit 1
+}
+
+# Parse -C before the subcommand/args
+while getopts "C:h" opt; do
+    case "$opt" in
+        C) WORKDIR="$OPTARG" ;;
+        h) usage ;;
+        *) usage ;;
+    esac
+done
+shift $((OPTIND - 1))
+
+cmd_registry_create() {
+    local name="${REGISTRY%%.exe.xyz}"
+    echo "=== creating registry VM: ${name} ==="
+    ssh exe.dev new --name "${name}" --disk=10GB || true
+    echo "Waiting for VM to boot..."
+    sleep 10
+    ssh "${REGISTRY}" docker run -d --name registry --restart=always \
+        -p 8000:5000 -v /home/exedev/registry:/var/lib/registry registry:2
+    echo "=== registry ready at ${REGISTRY}:8000 ==="
+}
+
+cmd_ship() {
+    local app="$1" tag="$2" vmname="${3:-${app}-${tag}}"
+
+    if [ ! -f "${WORKDIR}/${DOCKERFILE}" ]; then
+        echo "error: no Dockerfile found at ${WORKDIR}/${DOCKERFILE}" >&2
+        echo "set DOCKERFILE to override (e.g. DOCKERFILE=Dockerfile.prod $0 ...)" >&2
+        exit 1
+    fi
+
+    local image="${REGISTRY}/${app}:${tag}"
+    echo "=== building ${image} (context: ${WORKDIR}) ==="
+    docker build -t "${image}" -f "${WORKDIR}/${DOCKERFILE}" "${WORKDIR}"
+
+    echo "=== pushing ${image} ==="
+    docker push "${image}"
+
+    echo "=== creating VM: ${vmname} ==="
+    ssh exe.dev new --name "${vmname}" --image="${image}"
+}
+
+case "${1:-}" in
+    registry-create) cmd_registry_create ;;
+    -h|--help|-help) usage ;;
+    *)
+        [ $# -ge 2 ] || usage
+        cmd_ship "$@"
+        ;;
+esac

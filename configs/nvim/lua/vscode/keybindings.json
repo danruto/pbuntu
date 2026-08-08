@@ -1,0 +1,46 @@
+// Place your key bindings in this file to override the defaults
+[
+	{
+		"key": "ctrl+k",
+		"command": "workbench.action.navigateUp",
+		"when": "terminalFocus"
+	},
+	{
+		"key": "ctrl+j",
+		"command": "workbench.action.navigateDown",
+		"when": "terminalFocus"
+	},
+	{
+		"key": "ctrl+h",
+		"command": "workbench.action.navigateLeft",
+		"when": "terminalFocus"
+	},
+	{
+		"key": "ctrl+l",
+		"command": "workbench.action.navigateRight",
+		"when": "terminalFocus"
+	},
+	{
+		"key": "alt+l",
+		"command": "workbench.action.splitEditorRight"
+	},
+	{
+		"key": "alt+h",
+		"command": "workbench.action.splitEditorLeft"
+	},
+	{
+		"key": "ctrl+b",
+		"command": "-vscode-neovim.ctrl-b",
+		"when": "editorTextFocus && neovim.ctrlKeysNormal && neovim.init && neovim.mode != 'insert'"
+	},
+	{
+		"key": "alt+j",
+		"command": "workbench.action.terminal.toggleTerminal",
+		"when": "terminal.active"
+	},
+	{
+		"key": "alt+f",
+		"command": "editor.action.formatDocument",
+		"when": "editorHasDocumentFormattingProvider && editorTextFocus && !editorReadonly && !inCompositeEditor"
+	},
+]
