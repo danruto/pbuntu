@@ -90,7 +90,7 @@ RUN JUST_VERSION=$(curl -fsSL https://api.github.com/repos/casey/just/releases/l
 
 # gitui (git TUI)
 RUN GITUI_VERSION=$(curl -fsSL https://api.github.com/repos/extrawurst/gitui/releases/latest | jq -r '.tag_name') && \
-    curl -fsSL "https://github.com/extrawurst/gitui/releases/download/${GITUI_VERSION}/gitui-linux-musl.tar.gz" | tar -xzC /usr/local/bin gitui && \
+    curl -fsSL "https://github.com/extrawurst/gitui/releases/download/${GITUI_VERSION}/gitui-linux-$(uname -m).tar.gz" | tar -xzC /usr/local/bin && \
     chmod +x /usr/local/bin/gitui
 
 # cull (disk space TUI)
@@ -100,7 +100,8 @@ RUN CULL_VERSION=$(curl -fsSL https://api.github.com/repos/legostin/cull/release
 
 # elio (file manager)
 RUN ELIO_VERSION=$(curl -fsSL https://api.github.com/repos/elio-fm/elio/releases/latest | jq -r '.tag_name') && \
-    curl -fsSL "https://github.com/elio-fm/elio/releases/download/${ELIO_VERSION}/elio-${ELIO_VERSION}-$(uname -m)-unknown-linux-gnu.tar.gz" | tar -xzC /usr/local/bin elio && \
+    ELIO_NO_V="${ELIO_VERSION#v}" && \
+    curl -fsSL "https://github.com/elio-fm/elio/releases/download/${ELIO_VERSION}/elio-${ELIO_NO_V}-$(uname -m)-unknown-linux-gnu.tar.gz" | tar -xzC /usr/local/bin --wildcards --strip-components=1 '*/elio' && \
     chmod +x /usr/local/bin/elio
 
 # herdr (terminal workspace)
