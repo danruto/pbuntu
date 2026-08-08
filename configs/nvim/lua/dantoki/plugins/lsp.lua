@@ -388,7 +388,9 @@ return {
 		"olexsmir/gopher.nvim",
 		ft = "go",
 		build = function()
-			vim.cmd.GoInstallDeps()
+			if vim.fn.executable("go") == 1 then
+				vim.cmd.GoInstallDeps()
+			end
 		end,
 		opts = {},
 	},

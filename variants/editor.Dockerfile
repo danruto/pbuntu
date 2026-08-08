@@ -30,6 +30,9 @@ RUN mkdir -p /home/exedev/.ssh && \
     touch /home/exedev/.ssh/authorized_keys && \
     chmod 600 /home/exedev/.ssh/authorized_keys
 
+# Pre-build fff.nvim Rust backend so users don't hit an error on first nvim launch
+RUN nvim --headless "+lua require('fff.download').download_or_build_binary()" "+qa!"
+
 USER root
 
 # Update MOTD to indicate this is the editor variant

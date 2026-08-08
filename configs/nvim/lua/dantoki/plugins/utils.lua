@@ -263,7 +263,6 @@ return {
 	},
 	{
 		"dmtrKovalenko/fff.nvim",
-		dev = true,
 		lazy = false,
 		opts = {
 			prompt_position = "top",

@@ -15,7 +15,7 @@ if [[ $$ != 1 ]]; then
 	exit 1
 fi
 
-mkdir -p /run/systemd
+mkdir -p /run/systemd /run/sshd
 if [[ ! -f /sys/fs/cgroup/cgroup.controllers ]]; then
 	mount -t cgroup2 none /sys/fs/cgroup
 fi
