@@ -85,7 +85,19 @@ jobs:
           push: true
           pull: true
           tags: |
-            ghcr.io/danruto/pbuntu:${{ matrix.variant }}
             ghcr.io/danruto/pbuntu:${{ matrix.variant }}-${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+  cleanup:
+    needs: variants
+    if: github.event_name == 'schedule'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: dataaxiom/ghcr-cleanup-action@v1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          package: pbuntu
+          exclude-tags: "latest"
+          delete-untagged: true
+          keep-n-tagged: 20
