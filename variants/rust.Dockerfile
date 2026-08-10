@@ -7,9 +7,11 @@ FROM ghcr.io/danruto/pbuntu:latest
 
 SHELL ["/bin/bash", "-euxo", "pipefail", "-c"]
 
-# Bun (JavaScript runtime + bundler, needed for Tauri frontend)
-RUN curl -fsSL https://bun.sh/install | bash && \
-    ln -sf /root/.bun/bin/bun /usr/local/bin/bun
+# Bun (JavaScript runtime + bundler, needed for Tauri frontend).
+# BUN_INSTALL puts bun in /usr/local/bin directly; installing to /root/.bun and
+# symlinking leaves it unreachable for exedev, since /root is mode 0700.
+RUN curl -fsSL https://bun.sh/install | env BUN_INSTALL=/usr/local bash && \
+    bun --version
 
 # Rust via rustup (non-interactive, minimal profile — no docs, no extra targets)
 USER exedev
