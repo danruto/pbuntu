@@ -228,6 +228,11 @@ return {
 	},
 	{
 		"dundalek/lazy-lsp.nvim",
+		-- Disabled: it falls back to `nix shell`/`nix-shell` for any server not
+		-- found locally, and its nix-availability check hard-errors (E475) when
+		-- `nix` isn't on PATH, which isn't the case in this apt-based image.
+		-- The `servers` list above already covers the LSPs we use here.
+		enabled = false,
 		event = "InsertEnter",
 		dependencies = {
 			"neovim/nvim-lspconfig",
@@ -445,7 +450,7 @@ return {
 
 			fuzzy = {
 				prebuilt_binaries = {
-					download = false,
+					download = true,
 				},
 				implementation = "prefer_rust_with_warning",
 			},

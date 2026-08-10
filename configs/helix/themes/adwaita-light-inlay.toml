@@ -1,0 +1,4 @@
+inherits = "adwaita-light"
+
+'ui.virtual.inlay-hint' = { fg = "light_6" }
+"ui.virtual.jump-label" = { fg = "red_4", modifiers = ["bold"] }

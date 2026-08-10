@@ -100,6 +100,7 @@ build-editor: build ## Build editor variant (requires base)
 
 run-editor: build-editor
 	docker run -it --rm \
+	  --name pbuntu-editor \
 	  --cap-add=ALL \
 	  --security-opt seccomp=unconfined \
 	  --security-opt apparmor=unconfined \

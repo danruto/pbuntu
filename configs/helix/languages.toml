@@ -1,0 +1,162 @@
+[[language]]
+auto-format = true
+name = "javascript"
+
+[language.indent]
+tab-width = 4
+unit = "    "
+
+[[language]]
+auto-format = true
+name = "jsx"
+
+[language.indent]
+tab-width = 4
+unit = "    "
+
+[[language]]
+auto-format = true
+language-servers = [{except-features = ["format"], name = "typescript-language-server"}, "biome", "tailwindcss-ls"]
+name = "typescript"
+
+[language.indent]
+tab-width = 4
+unit = "    "
+
+[[language]]
+auto-format = true
+language-servers = [{except-features = ["format"], name = "typescript-language-server"}, "biome", "tailwindcss-ls"]
+name = "tsx"
+
+[language.indent]
+tab-width = 4
+unit = "    "
+
+[[language]]
+auto-format = true
+name = "css"
+
+[language.indent]
+tab-width = 4
+unit = "    "
+
+[[language]]
+auto-format = true
+name = "scss"
+
+[language.indent]
+tab-width = 4
+unit = "    "
+
+[[language]]
+auto-format = true
+name = "json"
+
+[language.indent]
+tab-width = 4
+unit = "    "
+
+[[language]]
+auto-format = true
+name = "yaml"
+
+[language.formatter]
+args = ["-formatter", "indent=4,retain_line_breaks_single=true", "-"]
+command = "yamlfmt"
+
+[language.indent]
+tab-width = 4
+unit = "    "
+
+[[language]]
+auto-format = true
+name = "html"
+
+[language.indent]
+tab-width = 4
+unit = "    "
+
+[[language]]
+auto-format = true
+name = "rust"
+
+[language.indent]
+tab-width = 4
+unit = "    "
+
+[[language]]
+auto-format = true
+language-servers = ["ruff", "basedpyright"]
+name = "python"
+
+[language.indent]
+tab-width = 4
+unit = "    "
+
+[[language]]
+auto-format = true
+name = "nix"
+
+[language.formatter]
+command = "nixpkgs-fmt"
+
+[language.indent]
+tab-width = 2
+unit = "  "
+
+[[language]]
+auto-format = true
+language-servers = ["roslyn-ls", "csls"]
+name = "c-sharp"
+
+[language.indent]
+tab-width = 4
+unit = "  "
+
+[language-server.biome]
+args = ["lsp-proxy"]
+command = "biome"
+
+[language-server.csls]
+command = "csharp-language-server"
+
+[language-server.gopls.config]
+"formatting.gofumpt" = true
+
+[language-server.roslyn-ls]
+args = ["--logLevel", "Information", "--extensionLogDirectory", "/tmp/roslyn_ls/logs", "--stdio"]
+command = "Microsoft.CodeAnalysis.LanguageServer"
+
+[language-server.rust-analyzer.config.check]
+command = "clippy"
+
+[language-server.typescript-language-server.config.javascript.inlayHints]
+includeInlayEnumMemberValueHints = false
+includeInlayFunctionLikeReturnTypeHints = false
+includeInlayFunctionParameterTypeHints = false
+includeInlayParameterNameHints = "all"
+includeInlayParameterNameHintsWhenArgumentMatchesName = false
+includeInlayPropertyDeclarationTypeHints = false
+includeInlayVariableTypeHints = false
+
+[language-server.typescript-language-server.config.typescript.inlayHints]
+includeInlayEnumMemberValueHints = false
+includeInlayFunctionLikeReturnTypeHints = false
+includeInlayFunctionParameterTypeHints = false
+includeInlayParameterNameHints = "all"
+includeInlayParameterNameHintsWhenArgumentMatchesName = false
+includeInlayPropertyDeclarationTypeHints = false
+includeInlayVariableTypeHints = false
+
+[language-server.vscode-eslint-language-server.config.codeActionsOnSave]
+mode = "all"
+"source.fixAll.eslint" = true
+
+[language-server.vscode-eslint-language-server.config.experimental]
+useFlatConfig = true
+
+[language-server.vscode-eslint-language-server.config.format]
+enable = false
+
+[language-server.vscode-eslint-language-server.config.workingDirectory]
+mode = "auto"
