@@ -1,5 +1,5 @@
-# Editor variant — base image + Helix editor + SSH server for herdr remote.
-# Connect from phone/tablet via `herdr remote`.
+# Editor variant — base image + Helix editor + SSH server.
+# Connect over standard SSH.
 #
 # Build:  make build-editor
 # Run:    make run-editor
@@ -36,20 +36,17 @@ RUN HELIX_VERSION=$(curl -fsSL https://api.github.com/repos/gj1118/helix/release
         tar -xJC /usr/local --strip-components=1 --wildcards '*/hx' '*/runtime' && \
     ln -sf /usr/local/hx /usr/local/bin/hx
 
-# Enable SSH server for herdr remote access.
+# Enable SSH server for remote access.
 # The base image masks ssh.service/ssh.socket; unmask and enable them.
 RUN systemctl unmask ssh.service ssh.socket && \
     systemctl enable ssh.service ssh.socket
 
-# Add herdr config for the exedev user
 USER exedev
-RUN mkdir -p /home/exedev/.config/herdr
 
 # Copy helix config
 COPY --chown=exedev:exedev configs/helix/ /home/exedev/.config/helix/
 
-# herdr remote uses SSH; ensure the user has an authorized_keys setup placeholder.
-# Real keys are injected at VM creation via /exe.dev/setup or cloud-init.
+# SSH keys are injected at VM creation via /exe.dev/setup or cloud-init.
 RUN mkdir -p /home/exedev/.ssh && \
     chmod 700 /home/exedev/.ssh && \
     touch /home/exedev/.ssh/authorized_keys && \
@@ -78,7 +75,7 @@ RUN nvim --headless "+lua require('nvim-treesitter.install').install({ \
 USER root
 
 # Update MOTD to indicate this is the editor variant
-RUN echo 'echo -e "\e[1;32m● editor variant — herdr remote ready\e[0m"' >> /home/exedev/.bashrc
+RUN echo 'echo -e "\e[1;32m● editor variant — SSH ready\e[0m"' >> /home/exedev/.bashrc
 
 LABEL "exe.dev/variant"="editor"
 CMD ["/usr/local/bin/init"]

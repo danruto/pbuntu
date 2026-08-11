@@ -9,10 +9,9 @@ FROM ghcr.io/danruto/pbuntu:latest
 
 SHELL ["/bin/bash", "-euxo", "pipefail", "-c"]
 
-# Strip the coding agents and herdr. The base bakes them in for dev use; a runner
-# only ever runs `docker compose`, so they are surface with no purpose here.
+# Strip the coding agents. Runners only execute Docker workloads.
 RUN rm -f /usr/local/bin/claude /usr/local/bin/codex /usr/local/bin/pi \
-          /usr/local/bin/herdr /home/exedev/.local/bin/pi && \
+          /home/exedev/.local/bin/pi && \
     rm -rf /home/exedev/.claude /home/exedev/.codex /home/exedev/.pi
 
 # The runner's whole job is `docker compose build/up/test`, and it has to be on

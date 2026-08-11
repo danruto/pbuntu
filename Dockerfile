@@ -92,9 +92,15 @@ RUN ELIO_VERSION=$(curl -fsSL https://api.github.com/repos/elio-fm/elio/releases
     curl -fsSL "https://github.com/elio-fm/elio/releases/download/${ELIO_VERSION}/elio-${ELIO_NO_V}-$(uname -m)-unknown-linux-gnu.tar.gz" | tar -xzC /usr/local/bin --wildcards --strip-components=1 '*/elio' && \
     chmod +x /usr/local/bin/elio
 
-# herdr (terminal workspace)
-RUN curl -fsSL "https://github.com/herdrdev/herdr/releases/latest/download/herdr-linux-$(uname -m | sed 's/x86_64/x86_64/;s/aarch64/aarch64/')" -o /usr/local/bin/herdr && \
-    chmod +x /usr/local/bin/herdr
+# Install Node.js for bb host-daemon enrollment and the project toolchain.
+# Keep npm's global prefix user-writable: the bb machine installer runs as exedev.
+RUN ARCH="$(uname -m)" && \
+    case "${ARCH}" in x86_64) NODE_ARCH=x64 ;; aarch64|arm64) NODE_ARCH=arm64 ;; *) echo "Unsupported architecture: ${ARCH}" && exit 1 ;; esac && \
+    NODE_VERSION=$(curl -fsSL https://nodejs.org/dist/index.json | jq -r '[.[] | select(.version | startswith("v24."))][0].version') && \
+    curl -fsSL "https://nodejs.org/dist/${NODE_VERSION}/node-${NODE_VERSION}-linux-${NODE_ARCH}.tar.xz" | \
+        tar -xJC /usr/local --strip-components=1 --exclude='*/README.md' --exclude='*/LICENSE' --exclude='*/CHANGELOG.md' && \
+    node --version && npm --version
+ENV NPM_CONFIG_PREFIX="/home/exedev/.local"
 
 # Configure systemd
 RUN rm /etc/systemd/system/multi-user.target.wants/console-setup.service \
@@ -161,7 +167,7 @@ RUN rm /etc/systemd/system/multi-user.target.wants/console-setup.service \
 		atop.service \
 		atopacct.service && \
 	# systemd-logind is disabled but not masked. It's involved in populating the XDG runtime dir sockets... somehow
-	systemctl disable docker.service containerd.service getty.target systemd-logind.service tailscaled.service \
+	systemctl disable docker.service containerd.service getty.target systemd-logind.service \
 		nginx.service \
                    console-getty.service \
                    getty@.service \
@@ -185,6 +191,7 @@ RUN rm /etc/systemd/system/multi-user.target.wants/console-setup.service \
 		   systemd-update-utmp.service \
 		   systemd-hwdb-update.service \
 		   multipathd.service && \
+	systemctl enable tailscaled.service && \
 	mkdir -p /etc/systemd/system.conf.d && \
     		echo '[Manager]' > /etc/systemd/system.conf.d/container-overrides.conf && \
     		echo 'LogLevel=info' >> /etc/systemd/system.conf.d/container-overrides.conf && \
@@ -258,12 +265,21 @@ RUN rm -rf /etc/update-motd.d/* /etc/motd && touch /home/exedev/.hushlogin && ch
 COPY motd-snippet.bash /tmp/motd-snippet.bash
 RUN cat /tmp/motd-snippet.bash >> /home/exedev/.bashrc && rm /tmp/motd-snippet.bash
 
+# Create systemd service for optional BB machine enrollment. The provisioning
+# layer writes /exe.dev/bb.env with join credentials at first boot; credentials
+# are never baked into the image.
+COPY bb-enroll.service /etc/systemd/system/bb-enroll.service
+COPY bb-enroll /usr/local/bin/bb-enroll
+RUN chmod 644 /etc/systemd/system/bb-enroll.service && \
+    chmod 755 /usr/local/bin/bb-enroll && \
+    systemctl enable bb-enroll.service
+
 # Create systemd socket and service for Shelley (socket activation).
 # The shelley binary itself is installed at vm creation.
 COPY shelley.socket /etc/systemd/system/shelley.socket
 COPY shelley.service /etc/systemd/system/shelley.service
 RUN chmod 644 /etc/systemd/system/shelley.socket /etc/systemd/system/shelley.service && \
-    systemctl disable shelley.socket
+    systemctl enable shelley.socket
 
 # Create systemd oneshot service for /exe.dev/setup script
 COPY exe-setup.service /etc/systemd/system/exe-setup.service

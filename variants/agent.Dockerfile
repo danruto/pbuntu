@@ -1,6 +1,5 @@
 # Agent variant — kitchen-sink image for factory coding-agent VMs.
-# Base + Go/Rust/Node/Python toolchains + the agent tool set + herdr integrations
-# + sshd + a herdr-server user unit, so an agent VM boots ready to clone and work.
+# Base + Go/Rust/Node/Python toolchains + the agent tool set + sshd.
 #
 # Build:  make build-agent
 # Run:    make run-agent
@@ -10,7 +9,7 @@ FROM ghcr.io/danruto/pbuntu:latest
 SHELL ["/bin/bash", "-euxo", "pipefail", "-c"]
 
 # Tool delta over base (base already has git, gh, jq, rg, just, curl, wget, btop,
-# sqlite3, neovim, docker, tailscale, herdr, claude, codex, pi).
+# sqlite3, neovim, docker, tailscale, claude, codex, pi, bb host-daemon support).
 RUN apt-get update && \
     DEBIAN_FRONTEND=noninteractive apt-get install -y \
         fzf git-delta tmux zsh direnv xz-utils && \
@@ -60,18 +59,10 @@ RUN curl -fsSL https://bun.sh/install | env BUN_INSTALL=/usr/local bash && \
 # agent runs is `docker compose run --rm test` (D-029).
 RUN systemctl enable tailscaled.service docker.service containerd.service
 
-# Enable SSH server — the control plane drives herdr over SSH (D-013/D-016).
+# Enable SSH server for remote access.
 # The base image masks ssh.service/ssh.socket; unmask and enable them.
 RUN systemctl unmask ssh.service ssh.socket && \
     systemctl enable ssh.service ssh.socket
-
-# herdr-server as a systemd user unit. `systemctl --user enable` needs a running
-# user bus, so link the wants symlink by hand at build time; linger is on in base.
-COPY herdr-server.service /home/exedev/.config/systemd/user/herdr-server.service
-RUN mkdir -p /home/exedev/.config/systemd/user/default.target.wants && \
-    ln -sf ../herdr-server.service \
-        /home/exedev/.config/systemd/user/default.target.wants/herdr-server.service && \
-    chown -R exedev:exedev /home/exedev/.config/systemd
 
 USER exedev
 
@@ -104,15 +95,8 @@ RUN corepack prepare pnpm@latest --activate && \
 RUN echo 'export PATH="$HOME/go/bin:$PATH"' >> /home/exedev/.bashrc && \
     mkdir -p /home/exedev/go/bin
 
-# Herdr integrations for the three agent kinds (G5 — this build is the proof).
-# pi is the lifecycle-authority integration; claude and codex are session-identity
-# only and need ~/.claude and ~/.codex to pre-exist, which the base image creates.
-RUN mkdir -p /home/exedev/.config/herdr && \
-    herdr integration install pi && \
-    herdr integration install claude && \
-    herdr integration install codex && \
-    herdr integration status
-
+# Agent integrations are provided by bb; no separate terminal-workspace
+# integration is installed in the image.
 # The control plane appends its own and the operator's key here post-boot (D-018).
 RUN mkdir -p /home/exedev/.ssh && \
     chmod 700 /home/exedev/.ssh && \

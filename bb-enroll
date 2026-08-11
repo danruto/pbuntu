@@ -1,0 +1,17 @@
+#!/bin/sh
+set -eu
+
+: "${BB_SERVER:?BB_SERVER is required}"
+: "${BB_JOIN_CODE:?BB_JOIN_CODE is required}"
+: "${BB_HOST_ID:?BB_HOST_ID is required}"
+
+case "$BB_SERVER" in
+  https://*) ;;
+  *) echo 'BB_SERVER must use https://' >&2; exit 2 ;;
+esac
+
+set -- --join-code "$BB_JOIN_CODE" --host-id "$BB_HOST_ID" --server "$BB_SERVER"
+[ -n "${BB_MACHINE_CODE:-}" ] && set -- "$@" --machine-code "$BB_MACHINE_CODE"
+[ -n "${BB_HOST_DAEMON_PORT:-}" ] && set -- "$@" --host-daemon-port "$BB_HOST_DAEMON_PORT"
+
+curl -fsSL "$BB_SERVER/install.sh" | sh -s -- "$@"
