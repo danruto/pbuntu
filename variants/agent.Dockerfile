@@ -57,8 +57,11 @@ RUN curl -fsSL https://bun.sh/install | env BUN_INSTALL=/usr/local bash && \
 # bb-app — the bb agent-runtime's host daemon (D-052, D-057). Pinned, not
 # latest: an enrolled machine and the bb server it joins must speak the same
 # protocol version, and machines never self-update (D-057) — bump this
-# alongside FACTORY_BB_VERSION on factory-bb, never independently.
-RUN npm i -g bb-app@0.37.0 && \
+# alongside FACTORY_BB_VERSION on factory-bb, never independently. Installed to
+# /usr/local rather than the base image's NPM_CONFIG_PREFIX (~/.local, off the
+# default PATH): the control plane invokes bb-app over a plain non-interactive
+# SSH command, which never sources a profile that would add it back.
+RUN NPM_CONFIG_PREFIX=/usr/local npm i -g bb-app@0.37.0 && \
     bb --version
 
 # Enable tailscaled and dockerd — base disables both. `tailscale up` needs the
