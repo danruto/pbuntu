@@ -54,6 +54,13 @@ RUN curl -LsSf https://astral.sh/uv/install.sh | \
 RUN curl -fsSL https://bun.sh/install | env BUN_INSTALL=/usr/local bash && \
     bun --version
 
+# bb-app — the bb agent-runtime's host daemon (D-052, D-057). Pinned, not
+# latest: an enrolled machine and the bb server it joins must speak the same
+# protocol version, and machines never self-update (D-057) — bump this
+# alongside FACTORY_BB_VERSION on factory-bb, never independently.
+RUN npm i -g bb-app@0.37.0 && \
+    bb --version
+
 # Enable tailscaled and dockerd — base disables both. `tailscale up` needs the
 # daemon already running (D-018/D-026), and the default project test command an
 # agent runs is `docker compose run --rm test` (D-029).
