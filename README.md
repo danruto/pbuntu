@@ -56,6 +56,44 @@ Use the resulting private tailnet HTTPS URL as `BB_SERVER`, then generate the
 machine join values from the control server's Settings → Machines. Do not use
 Tailscale Funnel or expose BB on a public interface.
 
+## Agent configuration sync
+
+The image ships the mechanism for pulling an operator's own agent configuration
+onto a VM and none of the configuration itself. These images are shared; the
+repositories they sync usually are not, so nothing operator-specific is baked in.
+
+Provide `/exe.dev/agent-config.env` listing the repositories:
+
+```dotenv
+AGENT_CONFIG_REPOS=you/one-repo you/another
+# Optional, the global agent instructions, in whichever repo carries them:
+AGENT_CONFIG_INSTRUCTIONS=path/within/the/repo/CLAUDE.md
+# Optional, defaults to exe.dev's GitHub proxy:
+AGENT_GIT_HOST=https://github.int.exe.xyz
+```
+
+There are no roles in that list — the unit does not know what any repository is
+"for". It clones each one in order and inspects it for things a harness
+understands:
+
+- `.claude-plugin/marketplace.json` → registers the checkout as a local Claude
+  Code marketplace and installs every plugin the manifest lists, by the names
+  the manifest gives;
+- `plugins/*/instructions` and its sibling `standards/` → copied into
+  `~/.pi/agent/skills/<repo>/` for pi;
+- `AGENT_CONFIG_INSTRUCTIONS`, if that path exists in the repo → merged ahead of
+  this image's own `AGENTS.md` into the single file `~/.claude/CLAUDE.md`,
+  `~/.codex/AGENTS.md` and `~/.pi/AGENTS.md` all point at. First repository in
+  the list carrying it wins.
+
+A repository offering none of these is cloned and nothing more.
+
+The env file is kept rather than consumed: it names repositories and carries no
+credential, so every boot re-syncs from it. The credential is whatever gives the
+VM read access to those repositories — on exe.dev, a readonly GitHub integration
+attached to the VM. Without one the unit fails and the VM is left exactly as the
+image built it; `systemctl status agent-config` says which step failed.
+
 ## Upstream
 
 This is a fork of [boldsoftware/exeuntu](https://github.com/boldsoftware/exeuntu).

@@ -1,0 +1,138 @@
+#!/usr/bin/env bash
+# Sync an operator's agent configuration onto this VM and wire it into every
+# harness on it.
+#
+# The image knows about harnesses, never about whose configuration it is
+# handling: it is given a list of repositories, and each one is inspected for
+# things a harness understands — a Claude Code marketplace manifest, plugins
+# carrying skills, a global instructions file. A repository offering none of
+# them is cloned and nothing more. The list is in /exe.dev/agent-config.env, the
+# read access is whatever the VM has been granted, and a VM given neither is
+# left exactly as the image built it.
+set -uo pipefail
+
+GIT_HOST=${AGENT_GIT_HOST:-https://github.int.exe.xyz}
+CHECKOUT_DIR=${AGENT_CHECKOUT_DIR:-$HOME/.local/share}
+
+# The image's own instructions, which the operator's are merged ahead of rather
+# than replacing: they describe this VM, and no repository of the operator's
+# knows that.
+IMAGE_INSTRUCTIONS=$HOME/.config/shelley/AGENTS.md
+MERGED_INSTRUCTIONS=$HOME/.config/agents/AGENTS.md
+
+failed=0
+merged=0
+
+log() { printf 'agent-config: %s\n' "$*"; }
+
+fail() {
+    log "$*"
+    failed=1
+}
+
+# sync_repo brings dest to the tip of repo's default branch, cloning it when
+# absent. It resets rather than pulls: the checkout is a delivery mechanism, and
+# a local edit on a VM must never be what stops the next boot from updating it.
+sync_repo() {
+    local repo=$1 dest=$2
+
+    if [ -d "$dest/.git" ]; then
+        git -C "$dest" remote set-url origin "$GIT_HOST/$repo" &&
+            git -C "$dest" fetch --quiet --prune origin &&
+            git -C "$dest" reset --quiet --hard '@{upstream}'
+        return
+    fi
+
+    rm -rf "$dest" && git clone --quiet "$GIT_HOST/$repo" "$dest"
+}
+
+# merge_instructions makes the operator's global instructions the ones every
+# harness reads, with the image's own appended. Concatenated rather than
+# @-imported: only Claude Code resolves imports, and codex and pi read the same
+# file.
+merge_instructions() {
+    local operator=$1
+
+    mkdir -p "$(dirname "$MERGED_INSTRUCTIONS")" || return 1
+    {
+        cat "$operator" || return 1
+        if [ -f "$IMAGE_INSTRUCTIONS" ]; then
+            printf '\n'
+            cat "$IMAGE_INSTRUCTIONS"
+        fi
+    } >"$MERGED_INSTRUCTIONS" || return 1
+
+    local link
+    for link in "$HOME/.claude/CLAUDE.md" "$HOME/.codex/AGENTS.md" "$HOME/.pi/AGENTS.md"; do
+        mkdir -p "$(dirname "$link")" && ln -sfn "$MERGED_INSTRUCTIONS" "$link" || return 1
+    done
+}
+
+# install_claude_plugins registers a checkout that carries a marketplace manifest
+# and installs every plugin it lists. Local, not the repository's GitHub source:
+# the checkout is already here and already current, and a remote add would need a
+# credential the VM does not hold. Names come out of the manifest.
+install_claude_plugins() {
+    local dest=$1 manifest=$1/.claude-plugin/marketplace.json
+
+    [ -f "$manifest" ] || return 0
+    command -v claude >/dev/null 2>&1 || return 0
+
+    local market
+    market=$(jq -er '.name' "$manifest") || return 1
+
+    claude plugin marketplace add "$dest" >/dev/null 2>&1 ||
+        claude plugin marketplace update "$market" >/dev/null 2>&1 ||
+        return 1
+
+    local plugin
+    while read -r plugin; do
+        claude plugin install "$plugin@$market" >/dev/null 2>&1 || return 1
+    done < <(jq -r '.plugins[].name' "$manifest")
+}
+
+# install_pi_skills copies each plugin's instructions/ and standards/ in as
+# siblings, which is the topology a SKILL.md's ../../standards/... paths resolve
+# against.
+install_pi_skills() {
+    local dest=$1 target=$HOME/.pi/agent/skills/$2
+    local instructions
+
+    for instructions in "$dest"/plugins/*/instructions; do
+        [ -d "$instructions" ] || continue
+        mkdir -p "$target" || return 1
+        rsync -a --delete \
+            "$instructions" "$(dirname "$instructions")/standards" "$target/" || return 1
+    done
+}
+
+read -ra repos <<<"${AGENT_CONFIG_REPOS:-}"
+for repo in "${repos[@]}"; do
+    name=$(basename "$repo")
+    dest=$CHECKOUT_DIR/$name
+
+    if ! sync_repo "$repo" "$dest"; then
+        fail "syncing $repo failed"
+        continue
+    fi
+
+    install_claude_plugins "$dest" || fail "installing $repo's Claude Code plugins failed"
+    install_pi_skills "$dest" "$name" || fail "installing $repo's skills for pi failed"
+
+    # First repository carrying the file wins, so the list's order decides which
+    # instructions are the global ones when more than one could answer.
+    if [ -n "${AGENT_CONFIG_INSTRUCTIONS:-}" ] && [ "$merged" = 0 ] &&
+        [ -f "$dest/$AGENT_CONFIG_INSTRUCTIONS" ]; then
+        if merge_instructions "$dest/$AGENT_CONFIG_INSTRUCTIONS"; then
+            merged=1
+        else
+            fail "wiring $repo's global instructions failed"
+        fi
+    fi
+done
+
+if [ -n "${AGENT_CONFIG_INSTRUCTIONS:-}" ] && [ "$merged" = 0 ]; then
+    fail "no repository carries $AGENT_CONFIG_INSTRUCTIONS"
+fi
+
+exit "$failed"

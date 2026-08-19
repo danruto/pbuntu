@@ -274,6 +274,15 @@ RUN chmod 644 /etc/systemd/system/bb-enroll.service && \
     chmod 755 /usr/local/bin/bb-enroll && \
     systemctl enable bb-enroll.service
 
+# Create systemd service for optional agent-configuration sync. The provisioning
+# layer writes /exe.dev/agent-config.env naming the repositories to pull; neither
+# a repository nor any content of one is baked into the image.
+COPY agent-config.service /etc/systemd/system/agent-config.service
+COPY agent-config-sync /usr/local/bin/agent-config-sync
+RUN chmod 644 /etc/systemd/system/agent-config.service && \
+    chmod 755 /usr/local/bin/agent-config-sync && \
+    systemctl enable agent-config.service
+
 # Create systemd socket and service for Shelley (socket activation).
 # The shelley binary itself is installed at vm creation.
 COPY shelley.socket /etc/systemd/system/shelley.socket

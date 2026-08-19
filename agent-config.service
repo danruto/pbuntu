@@ -1,0 +1,25 @@
+[Unit]
+Description=Sync the operator's agent skills and global instructions onto this VM
+ConditionPathExists=/exe.dev/agent-config.env
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+User=exedev
+Group=exedev
+WorkingDirectory=/home/exedev
+# Kept, not consumed: the file names repositories rather than carrying a
+# credential, so every boot can re-read it and refresh the checkouts.
+EnvironmentFile=/exe.dev/agent-config.env
+ExecStart=/usr/local/bin/agent-config-sync
+Environment=HOME=/home/exedev
+Environment=USER=exedev
+Environment=PATH=/home/exedev/.local/bin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=agent-config
+RemainAfterExit=no
+
+[Install]
+WantedBy=multi-user.target
