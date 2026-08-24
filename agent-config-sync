@@ -17,7 +17,13 @@ CHECKOUT_DIR=${AGENT_CHECKOUT_DIR:-$HOME/.local/share}
 # The image's own instructions, which the operator's are merged ahead of rather
 # than replacing: they describe this VM, and no repository of the operator's
 # knows that.
-IMAGE_INSTRUCTIONS=$HOME/.config/shelley/AGENTS.md
+#
+# The two must never name the same file. The merge redirects into
+# MERGED_INSTRUCTIONS, and the redirection truncates it before either read runs,
+# so a source anywhere in the output's own tree would be read empty and lost on
+# the first sync with nothing holding a second copy. IMAGE_INSTRUCTIONS is
+# root-owned and outside $HOME so that cannot be arranged by accident.
+IMAGE_INSTRUCTIONS=/etc/agents/AGENTS.md
 MERGED_INSTRUCTIONS=$HOME/.config/agents/AGENTS.md
 
 failed=0

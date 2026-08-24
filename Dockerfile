@@ -304,13 +304,21 @@ COPY init-wrapper.sh /usr/local/bin/init
 RUN mkdir -p /home/exedev/.claude /home/exedev/.codex /home/exedev/.pi && \
     chown -R exedev:exedev /home/exedev/.claude /home/exedev/.codex /home/exedev/.pi
 
-# Copy LLM agent instructions to Claude, Codex, and Shelley config directories
-# Shelley uses ~/.config/shelley/ (XDG convention, directory already created above)
-COPY AGENTS.md /home/exedev/.config/shelley/AGENTS.md
-RUN chown exedev:exedev /home/exedev/.config/shelley/AGENTS.md && \
-    ln -s /home/exedev/.config/shelley/AGENTS.md /home/exedev/.claude/CLAUDE.md && \
-    ln -s /home/exedev/.config/shelley/AGENTS.md /home/exedev/.codex/AGENTS.md && \
-    ln -s /home/exedev/.config/shelley/AGENTS.md /home/exedev/.pi/AGENTS.md
+# Copy the image's own agent instructions and point every harness at them.
+#
+# They live outside $HOME and outside any single agent's config directory.
+# agent-config-sync merges them with the operator's into
+# ~/.config/agents/AGENTS.md and repoints these symlinks there. A source file
+# inside that user-writable tree would be truncated by its own merge, and one
+# inside a single agent's directory outlives that agent's presence: shelley is
+# enabled only in the web variant, so on every other variant the canonical file
+# would sit in the config directory of an agent that never runs.
+COPY AGENTS.md /etc/agents/AGENTS.md
+RUN chmod 644 /etc/agents/AGENTS.md && \
+    ln -s /etc/agents/AGENTS.md /home/exedev/.claude/CLAUDE.md && \
+    ln -s /etc/agents/AGENTS.md /home/exedev/.codex/AGENTS.md && \
+    ln -s /etc/agents/AGENTS.md /home/exedev/.pi/AGENTS.md && \
+    ln -s /etc/agents/AGENTS.md /home/exedev/.config/shelley/AGENTS.md
 
 # Install Claude and Codex through exeuntu's direct updaters.
 USER root
