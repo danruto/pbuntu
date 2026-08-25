@@ -19,5 +19,11 @@ RUN apt-get update && \
 
 RUN echo 'echo -e "\e[1;36m● dev variant — project development VM\e[0m"' >> /home/exedev/.bashrc
 
+# Paseo pins the daemon + CLI the paseo-bootstrap unit drives by bare name
+# under systemd's default PATH, so the CLI goes to a system prefix — not the
+# user-writable NPM_CONFIG_PREFIX the base image sets.
+RUN npm install -g --prefix=/usr/local @getpaseo/cli@0.5.2 && \
+    /usr/local/bin/paseo --version
+
 LABEL "exe.dev/variant"="dev"
 CMD ["/usr/local/bin/init"]
