@@ -102,12 +102,6 @@ RUN ARCH="$(uname -m)" && \
     node --version && npm --version
 ENV NPM_CONFIG_PREFIX="/home/exedev/.local"
 
-# Paseo pins the daemon + CLI the paseo-bootstrap unit drives by bare name
-# under systemd's default PATH, so the CLI goes to a system prefix — not the
-# user-writable NPM_CONFIG_PREFIX above.
-RUN npm install -g --prefix=/usr/local @getpaseo/cli@0.5.2 && \
-    /usr/local/bin/paseo --version
-
 # Configure systemd
 RUN rm /etc/systemd/system/multi-user.target.wants/console-setup.service \
 		/etc/systemd/system/multi-user.target.wants/ModemManager.service \
