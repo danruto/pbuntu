@@ -329,18 +329,41 @@ RUN exeuntu update codex && \
     test -x /usr/local/bin/codex && \
     /usr/local/bin/codex --version
 
-# Install pi (pi-coding-agent) through exeuntu's updater.
+# Install pi (pi-coding-agent) from npm. It must land in the user-writable
+# NPM_CONFIG_PREFIX (not a system prefix like paseo's): pi's self-updater
+# (`pi update --self`) needs to write where it is installed.
 ARG PI_VERSION=
 USER exedev
 RUN if [ -n "${PI_VERSION}" ]; then \
-        exeuntu update pi --home /home/exedev --version "${PI_VERSION}"; \
+        npm install -g --ignore-scripts "@earendil-works/pi-coding-agent@${PI_VERSION}"; \
     else \
-        exeuntu update pi --home /home/exedev; \
+        npm install -g --ignore-scripts @earendil-works/pi-coding-agent; \
     fi && \
     test -x /home/exedev/.local/bin/pi && \
     /home/exedev/.local/bin/pi --version
 USER root
 RUN ln -sf /home/exedev/.local/bin/pi /usr/local/bin/pi
+
+# Default pi packages, preinstalled into ~/.pi/agent. Left unpinned so
+# `pi update --extensions` moves them forward inside running VMs.
+USER exedev
+RUN pi install npm:pi-ponytail && \
+    pi install npm:cc-safety-net && \
+    pi install npm:pi-web-access && \
+    pi install npm:pi-hermes-memory && \
+    pi list | grep -q pi-ponytail && \
+    pi list | grep -q cc-safety-net && \
+    pi list | grep -q pi-web-access && \
+    pi list | grep -q pi-hermes-memory
+
+# Point pi-hermes-memory's background reviews (correction saves, session
+# flushes, consolidation) at the exe.dev gateway's cheap DeepSeek Flash route
+# instead of the user's default chat model.
+RUN printf '%s\n' '{"llmModelOverride":"exe-dev-fireworks/accounts/fireworks/models/deepseek-v4-flash-0731@llm","llmThinkingOverride":"off"}' \
+      > /home/exedev/.pi/agent/hermes-memory-config.json && \
+    jq -e .llmModelOverride /home/exedev/.pi/agent/hermes-memory-config.json > /dev/null && \
+    chown exedev:exedev /home/exedev/.pi/agent/hermes-memory-config.json
+USER root
 
 # Install the pi exe.dev extension (LLM integration + environment context).
 # The bundled public catalog supplies pricing and compatibility metadata only;
@@ -351,6 +374,14 @@ RUN curl -fsSL --retry 5 --retry-delay 2 --retry-all-errors --max-time 30 \
       -o /home/exedev/.pi/agent/extensions/exe-dev/catalog.json && \
     jq -e '.schemaVersion | numbers' \
       /home/exedev/.pi/agent/extensions/exe-dev/catalog.json > /dev/null
+
+# The extension asks which model route to take when this file is absent, and
+# under pi's rpc transport that question arrives as an extension_ui_request
+# nothing is there to answer — the agent exits before its first turn. Recording
+# the answer here settles it for every unattended machine; a deployment that
+# ships a curated provider list overwrites it at provision time.
+RUN printf '%s\n' '{"version":1,"useExeIntegration":true}' \
+      > /home/exedev/.pi/agent/exe-dev-llm-integration.json
 RUN chown -R exedev:exedev /home/exedev/.pi/agent
 
 # Pre-install fd at the path pi checks first (~/.pi/agent/bin/fd), so pi
