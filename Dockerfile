@@ -1,5 +1,5 @@
 # Build the guest-facing pbuntu helper (forked from exeuntu).
-FROM docker.io/library/golang:1.26.5 AS exeuntu-cli
+FROM docker.io/library/golang:1.26.7 AS exeuntu-cli
 ARG EXEUNTU_GIT_VERSION=unknown
 WORKDIR /src/exeuntu-cli
 COPY cli/ ./
