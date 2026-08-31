@@ -34,6 +34,21 @@ RUN npm install -g --prefix=/usr/local @getpaseo/cli@0.6.1 && \
 USER exedev
 RUN npm install -g command-code@1.38.2 && \
     /home/exedev/.local/bin/command-code --version
+
+# Bake the BYOK provider config: the exe.dev LLM integration gateway
+# (keyless inside exe.dev VMs). Changes apply live, so a user edit or
+# /connect wizard overwrite simply replaces this file at runtime. localOnly
+# keeps cmd off the Command Code backend entirely — everything runs against
+# the gateway.
+RUN mkdir -p /home/exedev/.commandcode && \
+    cp configs/command-code/providers.json /home/exedev/.commandcode/providers.json && \
+    printf '%s\n' '{"localOnly": true}' > /home/exedev/.commandcode/config.json
+
+# pb-executor spawns cmd in non-interactive shells that source ~/.bashrc and
+# return at the interactive guard, so the gateway key must sit above it —
+# prepending keeps it there no matter what later appends add.
+RUN sed -i '1i # exe.dev LLM gateway key for cmd (non-interactive shells)\nexport COMMAND_CODE_API_KEY=exe-gateway' /home/exedev/.bashrc && \
+    grep -q 'COMMAND_CODE_API_KEY' /home/exedev/.bashrc
 USER root
 RUN ln -sf /home/exedev/.local/bin/command-code /usr/local/bin/command-code && \
     ln -sf /home/exedev/.local/bin/command-code /usr/local/bin/cmd

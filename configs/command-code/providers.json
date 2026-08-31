@@ -1,0 +1,82 @@
+{
+  "provider": {
+    "exe-llm": {
+      "name": "exe.dev LLM integration",
+      "api": "openai-completions",
+      "baseURL": "https://llm.int.exe.xyz/commandai/v1",
+      "apiKey": false,
+      "models": {
+        "z-ai/glm-5.3-flash": {
+          "name": "GLM-5.3 Flash",
+          "contextWindow": 1048576,
+          "maxOutput": 131072
+        },
+        "zai-org/GLM-5.2": {
+          "name": "GLM-5.2",
+          "contextWindow": 1000000,
+          "maxOutput": 131072
+        },
+        "zai-org/GLM-5.3": {
+          "name": "GLM-5.3",
+          "contextWindow": 1000000,
+          "maxOutput": 131072
+        },
+        "deepseek/deepseek-v4-flash": {
+          "name": "DeepSeek V4 Flash",
+          "contextWindow": 1048576,
+          "maxOutput": 393216
+        },
+        "deepseek/deepseek-v4-flash-vision-exp": {
+          "name": "DeepSeek V4 Flash Vision",
+          "contextWindow": 1000000,
+          "maxOutput": 393216
+        },
+        "deepseek/deepseek-v4-pro": {
+          "name": "DeepSeek V4 Pro",
+          "contextWindow": 1000000,
+          "maxOutput": 393216
+        },
+        "Qwen/Qwen3.7-Plus": {
+          "name": "Qwen3.7 Plus",
+          "contextWindow": 262144,
+          "maxOutput": 131072
+        },
+        "Qwen/Qwen3.8-Flash": {
+          "name": "Qwen3.8 Flash",
+          "contextWindow": 1000000,
+          "maxOutput": 131072
+        },
+        "Qwen/Qwen3.8-Max": {
+          "name": "Qwen3.8 Max",
+          "contextWindow": 1000000,
+          "maxOutput": 131072
+        },
+        "moonshotai/Kimi-K2.7-Code": {
+          "name": "Kimi K2.7 Code",
+          "contextWindow": 256000,
+          "maxOutput": 256000
+        },
+        "moonshotai/Kimi-K3": {
+          "name": "Kimi K3",
+          "contextWindow": 1000000,
+          "maxOutput": 1000000
+        },
+        "MiniMaxAI/MiniMax-M3": {
+          "name": "MiniMax M3",
+          "contextWindow": 512000,
+          "maxOutput": 512000
+        },
+        "xai/grok-4.5": {
+          "name": "Grok 4.5",
+          "contextWindow": 500000,
+          "maxOutput": 30000
+        },
+        "xai/grok-4.6": {
+          "name": "Grok 4.6",
+          "contextWindow": 500000,
+          "maxOutput": 30000
+        }
+      }
+    }
+  }
+}
