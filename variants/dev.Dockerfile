@@ -40,9 +40,12 @@ RUN npm install -g command-code@1.38.2 && \
 # /connect wizard overwrite simply replaces this file at runtime. localOnly
 # keeps cmd off the Command Code backend entirely — everything runs against
 # the gateway.
-RUN mkdir -p /home/exedev/.commandcode && \
-    cp configs/command-code/providers.json /home/exedev/.commandcode/providers.json && \
-    printf '%s\n' '{"localOnly": true}' > /home/exedev/.commandcode/config.json
+#
+# COPY rather than RUN cp: a RUN executes inside the image, where the build
+# context does not exist. COPY names its owner because the build runs as exedev
+# by here and COPY still lands root-owned otherwise.
+COPY --chown=exedev:exedev configs/command-code/providers.json /home/exedev/.commandcode/providers.json
+RUN printf '%s\n' '{"localOnly": true}' > /home/exedev/.commandcode/config.json
 
 # pb-executor spawns cmd in non-interactive shells that source ~/.bashrc and
 # return at the interactive guard, so the gateway key must sit above it —
