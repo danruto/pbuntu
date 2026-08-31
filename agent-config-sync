@@ -102,15 +102,17 @@ install_claude_plugins() {
     done < <(jq -r '.plugins[].name' "$manifest")
 }
 
-# install_pi_skills copies each plugin's instructions/ and its siblings in, which
-# is the topology a SKILL.md's ../../ paths resolve against. A skill reaches
-# past its own directory for standards, for the scripts it shells out to, and
-# for the plugin-root files those scripts read, so a copy carrying instructions
-# alone publishes skills whose every outward reference dangles.
-PI_PLUGIN_SIBLINGS="standards scripts executor-backends.json"
+# publish_skills copies each plugin's instructions/ and its siblings into one
+# harness's skills root, which is the topology a SKILL.md's ../../ paths resolve
+# against. A skill reaches past its own directory for standards, for the scripts
+# it shells out to, and for the plugin-root files those scripts read, so a copy
+# carrying instructions alone publishes skills whose every outward reference
+# dangles. Every harness that discovers skills recursively wants the same shape,
+# so they differ only in the root they want it under.
+PLUGIN_SIBLINGS="standards scripts executor-backends.json"
 
-install_pi_skills() {
-    local dest=$1 target=$HOME/.pi/agent/skills/$2
+publish_skills() {
+    local dest=$1 target=$2
     local instructions root sibling
     local -a sources
 
@@ -123,7 +125,7 @@ install_pi_skills() {
         [ -d "$instructions" ] || continue
         root=$(dirname "$instructions")
         sources=("$instructions")
-        for sibling in $PI_PLUGIN_SIBLINGS; do
+        for sibling in $PLUGIN_SIBLINGS; do
             [ -e "$root/$sibling" ] && sources+=("$root/$sibling")
         done
         mkdir -p "$target" || return 1
@@ -131,6 +133,15 @@ install_pi_skills() {
     done
 
     return 0
+}
+
+install_pi_skills() {
+    publish_skills "$1" "$HOME/.pi/agent/skills/$2"
+}
+
+# Command Code reads the same shape from its own root.
+install_cmd_skills() {
+    publish_skills "$1" "$HOME/.commandcode/skills/$2"
 }
 
 read -ra repos <<<"${AGENT_CONFIG_REPOS:-}"
@@ -145,6 +156,7 @@ for repo in "${repos[@]}"; do
 
     install_claude_plugins "$dest" || fail "installing $repo's Claude Code plugins failed"
     install_pi_skills "$dest" "$name" || fail "installing $repo's skills for pi failed"
+    install_cmd_skills "$dest" "$name" || fail "installing $repo's skills for Command Code failed"
 
     # First repository carrying the file wins, so the list's order decides which
     # instructions are the global ones when more than one could answer.

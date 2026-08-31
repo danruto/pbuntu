@@ -51,32 +51,39 @@ grep -Fqx "plugin update pb@pb-skills" "$FAKE_CLAUDE_LOG" || {
     exit 1
 }
 
-published="$home/.pi/agent/skills/pb-skills"
-skill_dir="$published/instructions/work"
-[[ -f "$skill_dir/SKILL.md" ]] || {
-    echo "pi topology: skill missing" >&2
-    exit 1
-}
-# Every ../../ reference in the published skill must land on a real file.
-while IFS= read -r relative; do
-    [[ -e "$skill_dir/$relative" ]] || {
-        echo "pi topology: cannot resolve $relative from $skill_dir" >&2
+# Every harness gets the same shape, so one assertion covers each root.
+assert_topology() {
+    local published=$1 label=$2
+    local skill_dir="$published/instructions/work"
+
+    [[ -f "$skill_dir/SKILL.md" ]] || {
+        echo "$label topology: skill missing" >&2
         exit 1
     }
-done < <(grep -o '`\.\./\.\./[^`]*`' "$skill_dir/SKILL.md" | tr -d '`' | sort -u)
-[[ -x "$published/scripts/pb-executor" ]] || {
-    echo "pi topology: executor lost its executable bit" >&2
-    exit 1
-}
-# pb-executor reads its catalog from the plugin root it infers, two levels up
-# from its own path.
-[[ -f "$published/executor-backends.json" ]] || {
-    echo "pi topology: backend catalog missing from the plugin root" >&2
-    exit 1
-}
-[[ -f "$published/instructions/solo/SKILL.md" ]] || {
-    echo "pi topology: a sibling-less plugin was dropped" >&2
-    exit 1
+    # Every ../../ reference in the published skill must land on a real file.
+    while IFS= read -r relative; do
+        [[ -e "$skill_dir/$relative" ]] || {
+            echo "$label topology: cannot resolve $relative from $skill_dir" >&2
+            exit 1
+        }
+    done < <(grep -o '`\.\./\.\./[^`]*`' "$skill_dir/SKILL.md" | tr -d '`' | sort -u)
+    [[ -x "$published/scripts/pb-executor" ]] || {
+        echo "$label topology: executor lost its executable bit" >&2
+        exit 1
+    }
+    # pb-executor reads its catalog from the plugin root it infers, two levels up
+    # from its own path.
+    [[ -f "$published/executor-backends.json" ]] || {
+        echo "$label topology: backend catalog missing from the plugin root" >&2
+        exit 1
+    }
+    [[ -f "$published/instructions/solo/SKILL.md" ]] || {
+        echo "$label topology: a sibling-less plugin was dropped" >&2
+        exit 1
+    }
 }
 
-printf 'ok -- agent-config-sync publishes a pi topology whose outward paths resolve\n'
+assert_topology "$home/.pi/agent/skills/pb-skills" pi
+assert_topology "$home/.commandcode/skills/pb-skills" "Command Code"
+
+printf 'ok -- agent-config-sync publishes pi and Command Code topologies whose outward paths resolve\n'
