@@ -274,6 +274,17 @@ RUN chmod 644 /etc/systemd/system/bb-enroll.service && \
     chmod 755 /usr/local/bin/bb-enroll && \
     systemctl enable bb-enroll.service
 
+# Create systemd service for optional OpenObserve metrics enrollment. The
+# provisioning layer writes /exe.dev/obs.env and /exe.dev/obs.secret at first
+# boot; obs-enroll probes the endpoint and lazily downloads the OpenTelemetry
+# Collector into the user prefix when it can reach it. Neither the collector
+# nor any credential is baked into the image.
+COPY obs-enroll.service /etc/systemd/system/obs-enroll.service
+COPY obs-enroll /usr/local/bin/obs-enroll
+RUN chmod 644 /etc/systemd/system/obs-enroll.service && \
+    chmod 755 /usr/local/bin/obs-enroll && \
+    systemctl enable obs-enroll.service
+
 # Create systemd service for optional agent-configuration sync. The provisioning
 # layer writes /exe.dev/agent-config.env naming the repositories to pull; neither
 # a repository nor any content of one is baked into the image.

@@ -1,0 +1,22 @@
+[Unit]
+Description=Enroll this VM for OpenObserve metrics (lazy)
+ConditionPathExists=/exe.dev/obs.env
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+User=exedev
+Group=exedev
+EnvironmentFile=/exe.dev/obs.env
+ExecStart=/usr/local/bin/obs-enroll
+RemainAfterExit=no
+Environment=HOME=/home/exedev
+Environment=USER=exedev
+Environment=PATH=/home/exedev/.local/bin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=obs-enroll
+
+[Install]
+WantedBy=multi-user.target

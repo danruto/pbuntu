@@ -2,6 +2,13 @@
 
 You are running in an exe.dev VM using the pbuntu image (a personal fork of exeuntu).
 
+The image can ship host metrics to an OpenObserve instance when the
+provisioning layer has written `/exe.dev/obs.env` (endpoint, org, login user,
+optional stream) and `/exe.dev/obs.secret` (the login password). `obs-enroll.service`
+probes the endpoint and, when it answers and accepts the credentials, downloads
+the OpenTelemetry Collector into the user prefix and starts it; without those
+files it stays inert.
+
 <https://exe.dev/docs/proxy.md> has details about the exe.dev HTTPS proxy.
 
 Only use documented exe.dev features (see <https://exe.dev/docs.md>). Undocumented local endpoints are internal infrastructure—unstable and unsupported.

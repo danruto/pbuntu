@@ -56,6 +56,41 @@ Use the resulting private tailnet HTTPS URL as `BB_SERVER`, then generate the
 machine join values from the control server's Settings → Machines. Do not use
 Tailscale Funnel or expose BB on a public interface.
 
+## OpenObserve metrics enrollment
+
+The image can ship host metrics (CPU, memory, disk, network) to an OpenObserve
+instance over OTLP/HTTP. It is opt-in and lazy: the image carries only a small
+enrollment script and a gated service — not the ~390MB OpenTelemetry Collector.
+`obs-enroll.service` is enabled but inert unless the provisioning layer writes
+`/exe.dev/obs.env` and `/exe.dev/obs.secret` at first boot, at which point it
+probes the endpoint, downloads the collector into the user prefix, and starts
+it. A VM never pointed at OpenObserve keeps no trace of one.
+
+Provide `/exe.dev/obs.env` and `/exe.dev/obs.secret`:
+
+```dotenv
+# /exe.dev/obs.env
+OBS_ENDPOINT=https://pb-obs.exe.xyz
+OBS_ORG=default
+OBS_USER=root@example.com
+# Optional:
+# OBS_STREAM=hostmetrics            # default; per-host streams are fine too
+# OBS_TLS_INSECURE=true             # skip TLS verification (private CA)
+# OBS_COLLECTOR_VERSION=v0.159.0    # pin the collector release (default latest)
+```
+
+`/exe.dev/obs.secret` holds that user's OpenObserve password. Everything about
+the deployment — endpoint, org, user, stream, collector version — comes from
+the env file; the password is read from the secret file, combined with the user
+into the Basic auth header, and handed to the collector over the environment.
+Neither is baked into the image nor written to disk by the script.
+
+Enrollment is conditional on a successful probe: if the endpoint's `/healthz`
+does not answer, or the credentials are rejected, the script leaves the VM
+exactly as the image built it and exits cleanly (`systemctl status obs-enroll`
+shows why). The collector's default stream is the shared `hostmetrics`; set
+`OBS_STREAM` for a per-machine or per-deployment stream.
+
 ## Agent configuration sync
 
 The image ships the mechanism for pulling an operator's own agent configuration

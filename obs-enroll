@@ -1,0 +1,131 @@
+#!/bin/sh
+# Ship this VM's host metrics to an OpenObserve instance.
+#
+# Opt-in and lazy, like bb-enroll: enabled in the image but inert unless the
+# provisioning layer has written /exe.dev/obs.env. Nothing about "whose"
+# OpenObserve is baked in — endpoint, org, user and stream all come from that
+# file. The collector itself (~390MB) is not baked either: it is downloaded
+# into the user prefix on first boot, and only when the endpoint answers and
+# accepts the credentials. A VM never pointed at OpenObserve keeps no trace of
+# one. The password lives in /exe.dev/obs.secret and is handed to the collector
+# over the environment, never written to disk by this script.
+set -eu
+
+: "${OBS_ENDPOINT:?OBS_ENDPOINT is required}"
+: "${OBS_ORG:?OBS_ORG is required}"
+: "${OBS_USER:?OBS_USER is required}"
+[ -r /exe.dev/obs.secret ] || {
+    echo 'obs-enroll: /exe.dev/obs.secret is missing or unreadable' >&2
+    exit 2
+}
+
+OBS_STREAM=${OBS_STREAM:-hostmetrics}
+# Optional: skip TLS certificate verification (self-signed or private-CA
+# endpoints). Unset means verify against the system trust store.
+OBS_TLS_INSECURE=${OBS_TLS_INSECURE:-false}
+# Optional: pin the collector release (tag, e.g. v0.159.0). Default latest.
+OBS_COLLECTOR_VERSION=${OBS_COLLECTOR_VERSION:-latest}
+
+case "$OBS_ENDPOINT" in
+    https://*) ;;
+    # Allow plain http:// only when TLS verification is off, i.e. local or
+    # explicitly insecure testing. Production must use https.
+    http://*)
+        [ "$OBS_TLS_INSECURE" = true ] || {
+            echo 'obs-enroll: plain http:// requires OBS_TLS_INSECURE=true' >&2
+            exit 2
+        }
+        ;;
+    *) echo 'obs-enroll: OBS_ENDPOINT must use https://' >&2; exit 2 ;;
+esac
+
+export OBS_BASIC_AUTH
+OBS_BASIC_AUTH=$(printf '%s:%s' "$OBS_USER" "$(cat /exe.dev/obs.secret)" | base64 | tr -d '\n')
+
+COLLECTOR="$HOME/.local/bin/otelcol-contrib"
+CONFIG="$HOME/.config/otelcol-contrib/config.yaml"
+
+# Probe the endpoint before installing anything: reachable and the credentials
+# accepted means "set up"; anything else leaves the VM as the image built it.
+# OpenObserve answers 401 for a bad password and 404 for an unknown org path,
+# so probe the health endpoint (200) and, when present, the org's streams
+# endpoint (200 means the user/org pair is valid).
+curl -fsS -o /dev/null "$OBS_ENDPOINT/healthz" || {
+    echo "obs-enroll: $OBS_ENDPOINT did not answer /healthz; leaving OpenObserve enrollment unset" >&2
+    exit 0
+}
+
+if command -v jq >/dev/null 2>&1; then
+    probe_streams() { curl -fsS -u "$OBS_USER:$(cat /exe.dev/obs.secret)" "$OBS_ENDPOINT/api/$OBS_ORG/streams?type=metrics"; }
+    if probe_streams >/dev/null 2>&1; then
+        : # credentials accepted
+    else
+        echo "obs-enroll: credentials for $OBS_ORG at $OBS_ENDPOINT were rejected; leaving OpenObserve enrollment unset" >&2
+        exit 0
+    fi
+fi
+
+# Fetch the collector release (a pinned tag or the latest) once per boot; a
+# repeated boot re-uses the install.
+ARCH=$(uname -m)
+case "$ARCH" in
+    x86_64) OTEL_ARCH=amd64 ;;
+    aarch64|arm64) OTEL_ARCH=arm64 ;;
+    *) echo "obs-enroll: unsupported architecture ${ARCH}" >&2; exit 2 ;;
+esac
+
+if [ "$OBS_COLLECTOR_VERSION" = latest ]; then
+    OBS_COLLECTOR_VERSION=$(curl -fsSL https://api.github.com/repos/open-telemetry/opentelemetry-collector-releases/releases/latest | jq -r '.tag_name')
+fi
+
+if [ ! -x "$COLLECTOR" ]; then
+    echo "obs-enroll: downloading otelcol-contrib ${OBS_COLLECTOR_VERSION} (${OTEL_ARCH})"
+    mkdir -p "$(dirname "$COLLECTOR")"
+    curl -fsSL "https://github.com/open-telemetry/opentelemetry-collector-releases/releases/download/${OBS_COLLECTOR_VERSION}/otelcol-contrib_${OBS_COLLECTOR_VERSION#v}_linux_${OTEL_ARCH}.tar.gz" |
+        tar -xzC "$(dirname "$COLLECTOR")" otelcol-contrib
+    chmod 0755 "$COLLECTOR"
+fi
+
+# Generate the collector config from the env file's values (never the secret).
+# The stream defaults to the shared "hostmetrics"; a deployment that wants a
+# distinct stream per machine sets OBS_STREAM.
+mkdir -p "$(dirname "$CONFIG")"
+cat >"$CONFIG" <<'YAML'
+receivers:
+  hostmetrics:
+    scrapers:
+      cpu: {}
+      load: {}
+      memory: {}
+      disk: {}
+      filesystem: {}
+      network: {}
+      processes: {}
+
+processors:
+  memory_limiter:
+    check_interval: 5s
+    limit_percentage: 80
+    spike_limit_percentage: 25
+  batch:
+    send_batch_size: 1000
+    timeout: 5s
+
+exporters:
+  otlphttp/openobserve:
+    endpoint: ${env:OBS_ENDPOINT}/api/${env:OBS_ORG}
+    headers:
+      Authorization: "Basic ${env:OBS_BASIC_AUTH}"
+      stream-name: ${env:OBS_STREAM}
+    tls:
+      insecure_skip_verify: ${env:OBS_TLS_INSECURE}
+
+service:
+  pipelines:
+    metrics:
+      receivers: [hostmetrics]
+      processors: [memory_limiter, batch]
+      exporters: [otlphttp/openobserve]
+YAML
+
+exec "$COLLECTOR" --config "$CONFIG"
