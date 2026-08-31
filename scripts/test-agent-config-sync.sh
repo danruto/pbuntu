@@ -17,6 +17,19 @@ echo '{"backends":{}}' >"$plugin/executor-backends.json"
 # A second plugin offering only instructions must not break the first's copy.
 mkdir -p "$tmp/origin/operator/pb-skills/plugins/bare/instructions/solo"
 echo 'bare' >"$tmp/origin/operator/pb-skills/plugins/bare/instructions/solo/SKILL.md"
+mkdir -p "$tmp/origin/operator/pb-skills/.claude-plugin"
+echo '{"name":"pb-skills","plugins":[{"name":"pb"}]}' \
+    >"$tmp/origin/operator/pb-skills/.claude-plugin/marketplace.json"
+
+# A fake claude records the subcommands the sync drives it with.
+mkdir -p "$tmp/bin"
+cat >"$tmp/bin/claude" <<'SH'
+#!/usr/bin/env bash
+printf '%s\n' "$*" >>"$FAKE_CLAUDE_LOG"
+SH
+chmod +x "$tmp/bin/claude"
+export FAKE_CLAUDE_LOG="$tmp/claude.log"
+: >"$FAKE_CLAUDE_LOG"
 
 git -C "$tmp/origin/operator/pb-skills" init --quiet
 git -C "$tmp/origin/operator/pb-skills" add -A
@@ -24,8 +37,19 @@ git -C "$tmp/origin/operator/pb-skills" -c user.email=t@t -c user.name=t commit 
 
 home="$tmp/home"
 mkdir -p "$home"
-HOME="$home" AGENT_GIT_HOST="$tmp/origin" AGENT_CHECKOUT_DIR="$tmp/share" \
+HOME="$home" PATH="$tmp/bin:$PATH" AGENT_GIT_HOST="$tmp/origin" AGENT_CHECKOUT_DIR="$tmp/share" \
     AGENT_CONFIG_REPOS=operator/pb-skills "$repo/agent-config-sync"
+
+# install alone is a no-op once the plugin exists at any version, so the sync has
+# to drive update too or the Claude copy pins the first sync's commit forever.
+grep -Fqx "plugin install pb@pb-skills" "$FAKE_CLAUDE_LOG" || {
+    echo "claude plugins: install was never driven" >&2
+    exit 1
+}
+grep -Fqx "plugin update pb@pb-skills" "$FAKE_CLAUDE_LOG" || {
+    echo "claude plugins: update was never driven, so the cache would stay pinned" >&2
+    exit 1
+}
 
 published="$home/.pi/agent/skills/pb-skills"
 skill_dir="$published/instructions/work"

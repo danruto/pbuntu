@@ -91,9 +91,14 @@ install_claude_plugins() {
         claude plugin marketplace update "$market" >/dev/null 2>&1 ||
         return 1
 
+    # install is a no-op once the plugin is present at any version, so on its own
+    # it pins the first sync's commit forever while the checkout beside it moves
+    # on. update is what re-reads the marketplace and pulls the current one; it
+    # answers zero when there is nothing to pull, so both run every time.
     local plugin
     while read -r plugin; do
         claude plugin install "$plugin@$market" >/dev/null 2>&1 || return 1
+        claude plugin update "$plugin@$market" >/dev/null 2>&1 || return 1
     done < <(jq -r '.plugins[].name' "$manifest")
 }
 
