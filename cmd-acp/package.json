@@ -1,0 +1,12 @@
+{
+  "name": "cmd-acp",
+  "version": "0.1.0",
+  "description": "Minimal ACP (Agent Client Protocol) wrapper around the command-code CLI",
+  "type": "module",
+  "bin": {
+    "cmd-acp": "index.mjs"
+  },
+  "dependencies": {
+    "@agentclientprotocol/sdk": "^1.4.0"
+  }
+}
