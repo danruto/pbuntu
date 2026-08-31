@@ -597,6 +597,27 @@ function windowFor(providerKey: string, modelID: string): number | undefined {
 		?.contextWindow;
 }
 
+function maxTokensFor(
+	providerKey: string,
+	modelID: string,
+): number | undefined {
+	const infos = providerInfosFromIntegrationCatalogs(
+		[
+			{
+				name: "llm",
+				baseURL: "https://llm.int.exe.xyz",
+				catalog: liveCatalog,
+			},
+		],
+		undefined,
+		() => {},
+	);
+	return infos
+		.get(providerKey)
+		?.config.models?.find((model) => model.id === `${modelID}@llm`)
+		?.maxTokens;
+}
+
 test("reads context windows out of the live catalog's upstream passthrough", () => {
 	// commandai ships no `limits` at all; every one of its models carries the
 	// window under upstream.context_length.
@@ -621,15 +642,83 @@ test("keeps integration limits ahead of the upstream passthrough", () => {
 	assert.equal(windowFor("exe-dev-anthropic", "claude-opus-5"), 1000000);
 });
 
-test("derives opencode-go windows the live catalog cannot supply", () => {
+test("supplies opencode-go windows the live catalog cannot", () => {
 	// opencode-go has neither `limits` nor a usable `upstream`, so these come
-	// from the derived table.
+	// from the probed table.
 	assert.equal(windowFor("exe-dev-opencode-go", "glm-5.3"), 1000000);
 	// Providers disagreed on these two; the lower value is the one we take.
 	assert.equal(windowFor("exe-dev-opencode-go", "minimax-m3"), 512000);
 	assert.equal(windowFor("exe-dev-opencode-go", "qwen3.7-plus"), 262144);
 	// No counterpart in any provider, so the default is the only answer left.
 	assert.equal(windowFor("exe-dev-opencode-go", "longcat-2.0"), 128000);
+});
+
+test("takes a probed window over the upstream passthrough's claim", () => {
+	// commandai advertises 1000000 for Step-3.5-Flash and then rejects anything
+	// over 262144, so the claim cannot be the last word once a probe disagrees.
+	assert.equal(
+		liveCatalog.models.find((m) => m.id === "commandai/stepfun/Step-3.5-Flash")
+			?.upstream?.context_length,
+		1000000,
+	);
+	assert.equal(windowFor("exe-dev-commandai", "stepfun/Step-3.5-Flash"), 262144);
+});
+
+test("gives gateway models a real output cap instead of the 4096 default", () => {
+	// Neither provider ships `limits`, and commandai's `upstream` carries a
+	// window but no output ceiling, so without the probed table every one of
+	// these models would ask for 4096 tokens and truncate every long answer.
+	assert.equal(maxTokensFor("exe-dev-commandai", "zai-org/GLM-5.3"), 131072);
+	assert.equal(maxTokensFor("exe-dev-commandai", "z-ai/glm-5.3-flash"), 131072);
+	// opencode-go answers a probe even though it publishes nothing at all.
+	assert.equal(maxTokensFor("exe-dev-opencode-go", "glm-5.3"), 131072);
+	assert.equal(maxTokensFor("exe-dev-opencode-go", "qwen3.7-plus"), 131072);
+});
+
+test("never lets an output cap exceed the window it has to fit in", () => {
+	// minimax-m3's probed ceiling is 524288 against a 512000 window. Claiming an
+	// output cap the model can never reach makes pi read every length-stop as a
+	// recoverable overflow and compact-and-retry for nothing.
+	for (const [provider, id] of [
+		["exe-dev-commandai", "zai-org/GLM-5.3"],
+		["exe-dev-commandai", "stepfun/Step-3.5-Flash"],
+		["exe-dev-opencode-go", "glm-5.3"],
+		["exe-dev-opencode-go", "minimax-m3"],
+		["exe-dev-opencode-go", "qwen3.7-plus"],
+		["exe-dev-opencode-go", "longcat-2.0"],
+	]) {
+		const maxTokens = maxTokensFor(provider, id);
+		const window = windowFor(provider, id);
+		assert.ok(
+			maxTokens !== undefined && window !== undefined && maxTokens <= window,
+			`${provider}/${id}: maxTokens ${maxTokens} exceeds window ${window}`,
+		);
+	}
+});
+
+test("fills a hole in a provider that is otherwise normalized", () => {
+	// exe.dev declares max_output_tokens for grok-4.5 and nothing for grok-4.6,
+	// so the newer model dropped to the 4096 default on a provider whose other
+	// models are fine. The window it does publish still wins.
+	assert.equal(
+		liveCatalog.models.find((m) => m.id === "xai/grok-4.6")?.limits
+			?.max_output_tokens,
+		undefined,
+	);
+	assert.equal(maxTokensFor("exe-dev-xai", "grok-4.6"), 30000);
+	assert.equal(windowFor("exe-dev-xai", "grok-4.6"), 500000);
+	// The sibling that does publish one is untouched by the table.
+	assert.equal(maxTokensFor("exe-dev-xai", "grok-4.5"), 30000);
+});
+
+test("keeps integration limits ahead of a probed value", () => {
+	// fireworks and anthropic are normalized by exe.dev; the probed table exists
+	// only for the providers that are not, and must never override them.
+	assert.equal(
+		maxTokensFor("exe-dev-fireworks", "accounts/fireworks/models/glm-5p3"),
+		131072,
+	);
+	assert.equal(maxTokensFor("exe-dev-anthropic", "claude-opus-5"), 128000);
 });
 
 test("ignores unusable upstream context values", () => {

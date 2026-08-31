@@ -530,6 +530,36 @@
 			}
 		},
 		{
+			"id": "commandai/stepfun/Step-3.5-Flash",
+			"name": "stepfun/Step-3.5-Flash",
+			"provider": "commandai",
+			"native_id": "stepfun/Step-3.5-Flash",
+			"apis": [
+				"openai_chat"
+			],
+			"upstream": {
+				"id": "stepfun/Step-3.5-Flash",
+				"object": "model",
+				"created": 1788149215,
+				"owned_by": "command-code",
+				"name": "Step 3.5 Flash",
+				"context_length": 1000000
+			},
+			"architecture": {
+				"modality": "text->text",
+				"input_modalities": [
+					"text"
+				],
+				"output_modalities": [
+					"text"
+				],
+				"tokenizer": "commandai"
+			},
+			"exe_dev": {
+				"mode": "byok"
+			}
+		},
+		{
 			"id": "opencode-go/glm-5.3",
 			"name": "glm-5.3",
 			"provider": "opencode-go",
@@ -639,6 +669,89 @@
 			},
 			"exe_dev": {
 				"mode": "byok"
+			}
+		},
+		{
+			"id": "xai/grok-4.6",
+			"name": "Grok 4.6",
+			"provider": "xai",
+			"native_id": "grok-4.6",
+			"apis": [
+				"openai_chat",
+				"openai_responses"
+			],
+			"upstream": {
+				"id": "grok-4.6",
+				"object": "model",
+				"owned_by": "xai"
+			},
+			"architecture": {
+				"modality": "text+image+pdf->text",
+				"input_modalities": [
+					"text",
+					"image",
+					"pdf"
+				],
+				"output_modalities": [
+					"text"
+				],
+				"tokenizer": "xai"
+			},
+			"limits": {
+				"context_window": 500000
+			},
+			"supported_parameters": [
+				"messages",
+				"max_tokens",
+				"temperature",
+				"top_p",
+				"stream",
+				"tools"
+			],
+			"exe_dev": {
+				"mode": "managed"
+			}
+		},
+		{
+			"id": "xai/grok-4.5",
+			"name": "Grok 4.5",
+			"provider": "xai",
+			"native_id": "grok-4.5",
+			"apis": [
+				"openai_chat",
+				"openai_responses"
+			],
+			"upstream": {
+				"id": "grok-4.5",
+				"object": "model",
+				"owned_by": "xai"
+			},
+			"architecture": {
+				"modality": "text+image+pdf->text",
+				"input_modalities": [
+					"text",
+					"image",
+					"pdf"
+				],
+				"output_modalities": [
+					"text"
+				],
+				"tokenizer": "xai"
+			},
+			"limits": {
+				"context_window": 500000,
+				"max_output_tokens": 30000
+			},
+			"supported_parameters": [
+				"messages",
+				"max_tokens",
+				"temperature",
+				"top_p",
+				"stream",
+				"tools"
+			],
+			"exe_dev": {
+				"mode": "managed"
 			}
 		}
 	]

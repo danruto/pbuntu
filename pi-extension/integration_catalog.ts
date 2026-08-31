@@ -450,45 +450,116 @@ function gatewayModelCapabilities(provider: string, modelID: string) {
 	};
 }
 
-// exe.dev's llm integration leaves `limits` empty for opencode-go, and its
-// `upstream` passthrough is a bare OpenAI /v1/models record with no window in
-// it, so nothing at runtime describes these models. Each value below is the
-// smallest window any other provider in the same catalog reports for the same
-// base model. Lowest wins because opencode-go does not validate oversized
-// requests — it truncates silently, so guessing high corrupts answers without
-// surfacing an error, while guessing low only wastes context.
-// Models with no counterpart anywhere are absent on purpose and fall to the
-// default: hy3-preview, longcat-2.0, mimo-v2-omni, mimo-v2-pro, qwen3.5-plus.
-const DERIVED_CONTEXT_WINDOWS: ReadonlyMap<string, number> = new Map([
-	["opencode-go\0deepseek-v4-flash", 1000000],
-	["opencode-go\0deepseek-v4-flash-vision-exp", 1000000],
-	["opencode-go\0deepseek-v4-pro", 1000000],
-	["opencode-go\0glm-5", 200000],
-	["opencode-go\0glm-5.1", 200000],
-	["opencode-go\0glm-5.2", 1000000],
-	["opencode-go\0glm-5.3", 1000000],
-	["opencode-go\0glm-5.3-flash", 1048576],
-	["opencode-go\0gpt-5.6-luna", 1050000],
-	["opencode-go\0grok-4.5", 500000],
-	["opencode-go\0grok-4.6", 500000],
-	["opencode-go\0hy3", 262144],
-	["opencode-go\0hy4-preview", 1048576],
-	["opencode-go\0kimi-k2.5", 256000],
-	["opencode-go\0kimi-k2.6", 256000],
-	["opencode-go\0kimi-k2.7-code", 256000],
-	["opencode-go\0kimi-k3", 1000000],
-	["opencode-go\0mimo-v2.5", 1000000],
-	["opencode-go\0mimo-v2.5-pro", 1000000],
-	["opencode-go\0minimax-m2.5", 200000],
-	["opencode-go\0minimax-m2.7", 197000],
-	["opencode-go\0minimax-m3", 512000],
-	["opencode-go\0muse-spark-1.2-contributor", 1048576],
-	["opencode-go\0qwen3.6-plus", 200000],
-	["opencode-go\0qwen3.7-max", 1000000],
-	["opencode-go\0qwen3.7-plus", 262144],
-	["opencode-go\0qwen3.8-flash", 1000000],
-	["opencode-go\0qwen3.8-max", 1000000],
+// Real context and output ceilings for the models exe.dev ships incomplete
+// `limits` for. Regenerate with scripts/probe-gateway-limits.mjs rather
+// than editing by hand.
+//
+// A value is the ceiling the provider itself named and then honoured when we
+// asked for exactly it; failing that, the lowest such ceiling another provider
+// confirmed for the same model; failing that, the lowest limit a provider
+// exe.dev does normalize declares for it. A probe beats a declared limit
+// because a declared limit is that provider's own serving cap, not the
+// model's. Lowest wins throughout: these providers truncate an oversized
+// request instead of rejecting it, so guessing high corrupts answers silently
+// while guessing low only wastes budget.
+//
+// 73 of 96 models resolved against pb-base.exe.xyz.
+const PROBED_LIMITS: ReadonlyMap<
+	string,
+	{ contextWindow?: number; maxTokens?: number }
+> = new Map([
+	["commandai\0MiniMaxAI/MiniMax-M2.7", { maxTokens: 196608 }],
+	["commandai\0MiniMaxAI/MiniMax-M3", { maxTokens: 524288 }],
+	["commandai\0Qwen/Qwen3.6-Max-Preview", { maxTokens: 65536 }],
+	["commandai\0Qwen/Qwen3.6-Plus", { maxTokens: 65536 }],
+	["commandai\0Qwen/Qwen3.7-Flash", { maxTokens: 131072 }],
+	["commandai\0Qwen/Qwen3.7-Max", { maxTokens: 131072 }],
+	["commandai\0Qwen/Qwen3.7-Plus", { maxTokens: 131072 }],
+	["commandai\0Qwen/Qwen3.8-Flash", { maxTokens: 131072 }],
+	["commandai\0Qwen/Qwen3.8-Max", { maxTokens: 131072 }],
+	["commandai\0claude-fable-5", { maxTokens: 128000 }],
+	["commandai\0claude-haiku-4-5-20251001", { maxTokens: 64000 }],
+	["commandai\0claude-opus-4-7", { maxTokens: 128000 }],
+	["commandai\0claude-opus-4-8", { maxTokens: 128000 }],
+	["commandai\0claude-opus-5", { maxTokens: 128000 }],
+	["commandai\0claude-sonnet-4-6", { maxTokens: 128000 }],
+	["commandai\0claude-sonnet-5", { maxTokens: 128000 }],
+	["commandai\0deepseek/deepseek-v4-flash", { maxTokens: 393216 }],
+	["commandai\0deepseek/deepseek-v4-flash-vision-exp", { maxTokens: 393216 }],
+	["commandai\0deepseek/deepseek-v4-pro", { maxTokens: 393216 }],
+	["commandai\0gpt-5.3-codex", { maxTokens: 128000 }],
+	["commandai\0gpt-5.4", { maxTokens: 128000 }],
+	["commandai\0gpt-5.4-mini", { maxTokens: 128000 }],
+	["commandai\0gpt-5.5", { maxTokens: 128000 }],
+	["commandai\0gpt-5.6-luna", { maxTokens: 128000 }],
+	["commandai\0gpt-5.6-sol", { maxTokens: 128000 }],
+	["commandai\0gpt-5.6-terra", { maxTokens: 128000 }],
+	["commandai\0minimax/minimax-m2.7-free", { maxTokens: 196608 }],
+	["commandai\0minimax/minimax-m3-free", { maxTokens: 524288 }],
+	["commandai\0moonshotai/Kimi-K2.6", { maxTokens: 16384 }],
+	["commandai\0moonshotai/Kimi-K2.7-Code", { maxTokens: 256000 }],
+	["commandai\0moonshotai/Kimi-K3", { maxTokens: 1000000 }],
+	["commandai\0poolside/laguna-s-2.1-free", { maxTokens: 32768 }],
+	["commandai\0stepfun/Step-3.5-Flash", { contextWindow: 262144 }],
+	["commandai\0thinkingmachines/inkling", { maxTokens: 256000 }],
+	["commandai\0thinkingmachines/inkling-small", { maxTokens: 262144 }],
+	["commandai\0xai/grok-4.5", { maxTokens: 30000 }],
+	["commandai\0xai/grok-4.6", { maxTokens: 30000 }],
+	["commandai\0xiaomi/mimo-v2.5", { maxTokens: 131072 }],
+	["commandai\0xiaomi/mimo-v2.5-pro", { maxTokens: 131072 }],
+	["commandai\0z-ai/glm-5.3-flash", { maxTokens: 131072 }],
+	["commandai\0zai-org/GLM-5.2", { maxTokens: 131072 }],
+	["commandai\0zai-org/GLM-5.3", { maxTokens: 131072 }],
+	["opencode-go\0deepseek-v4-flash", { contextWindow: 1000000, maxTokens: 393216 }],
+	["opencode-go\0deepseek-v4-flash-vision-exp", { contextWindow: 1000000, maxTokens: 393216 }],
+	["opencode-go\0deepseek-v4-pro", { contextWindow: 1000000, maxTokens: 393216 }],
+	["opencode-go\0glm-5", { contextWindow: 200000 }],
+	["opencode-go\0glm-5.1", { contextWindow: 200000 }],
+	["opencode-go\0glm-5.2", { contextWindow: 1000000, maxTokens: 131072 }],
+	["opencode-go\0glm-5.3", { contextWindow: 1000000, maxTokens: 131072 }],
+	["opencode-go\0glm-5.3-flash", { contextWindow: 1048576, maxTokens: 131072 }],
+	["opencode-go\0gpt-5.6-luna", { contextWindow: 1050000, maxTokens: 128000 }],
+	["opencode-go\0grok-4.5", { contextWindow: 500000, maxTokens: 30000 }],
+	["opencode-go\0grok-4.6", { contextWindow: 500000, maxTokens: 30000 }],
+	["opencode-go\0hy3", { contextWindow: 262144 }],
+	["opencode-go\0hy4-preview", { contextWindow: 1048576 }],
+	["opencode-go\0kimi-k2.5", { contextWindow: 262144 }],
+	["opencode-go\0kimi-k2.6", { contextWindow: 262144, maxTokens: 16384 }],
+	["opencode-go\0kimi-k2.7-code", { contextWindow: 256000, maxTokens: 256000 }],
+	["opencode-go\0kimi-k3", { contextWindow: 1000000, maxTokens: 1000000 }],
+	["opencode-go\0longcat-2.0", { maxTokens: 128000 }],
+	["opencode-go\0mimo-v2.5", { contextWindow: 1000000, maxTokens: 131072 }],
+	["opencode-go\0mimo-v2.5-pro", { contextWindow: 1000000, maxTokens: 131072 }],
+	["opencode-go\0minimax-m2.5", { contextWindow: 204800 }],
+	["opencode-go\0minimax-m2.7", { contextWindow: 197000, maxTokens: 196608 }],
+	["opencode-go\0minimax-m3", { contextWindow: 512000, maxTokens: 512000 }],
+	["opencode-go\0muse-spark-1.2-contributor", { contextWindow: 1048576 }],
+	["opencode-go\0qwen3.5-plus", { maxTokens: 65536 }],
+	["opencode-go\0qwen3.6-plus", { contextWindow: 200000, maxTokens: 65536 }],
+	["opencode-go\0qwen3.7-max", { contextWindow: 1000000, maxTokens: 131072 }],
+	["opencode-go\0qwen3.7-plus", { contextWindow: 262144, maxTokens: 131072 }],
+	["opencode-go\0qwen3.8-flash", { contextWindow: 1000000, maxTokens: 131072 }],
+	["opencode-go\0qwen3.8-max", { contextWindow: 1000000, maxTokens: 131072 }],
+	["xai\0grok-4.6", { maxTokens: 30000 }],
 ]);
+
+// The remaining 23 gateway models keep the defaults. Some accept any
+// max_tokens and clamp in silence, so their real ceiling never surfaces; the
+// rest are off-plan, wrong-protocol, or unavailable, and cannot be asked:
+//   commandai/MiniMaxAI/MiniMax-M2.5 (clamps),
+//   commandai/Qwen/Qwen3.8-27B (clamps),
+//   commandai/google/gemini-3.1-flash-lite, commandai/google/gemini-3.5-flash,
+//   commandai/google/gemini-3.5-flash-lite, commandai/google/gemini-3.6-flash,
+//   commandai/google/gemini-3.7-flash, commandai/meta/muse-spark-1.1,
+//   commandai/meta/muse-spark-1.2, commandai/meta/muse-spark-1.2-contributor,
+//   commandai/moonshotai/Kimi-K2.5 (clamps),
+//   commandai/moonshotai/Kimi-K2.7-Code-Highspeed (clamps),
+//   commandai/nvidia/nemotron-3-ultra-550b-a55b (clamps),
+//   commandai/sakana/fugu-ultra, commandai/stepfun/Step-3.7-Flash,
+//   commandai/tencent/hy3-paid, commandai/tencent/hy4-preview,
+//   commandai/zai-org/GLM-5 (clamps), commandai/zai-org/GLM-5.1 (clamps),
+//   commandai/zai-org/GLM-5.2-Fast (clamps), opencode-go/hy3-preview,
+//   opencode-go/mimo-v2-omni, opencode-go/mimo-v2-pro
 
 function positiveLimit(value: number | undefined): number | undefined {
 	return typeof value === "number" && Number.isFinite(value) && value > 0
@@ -514,6 +585,7 @@ function configFromIntegrationModel(
 	if (!modelID) return undefined;
 	const compat = sanitizeCompat(fallback?.compat, model.provider, modelID);
 	const gatewayCapabilities = gatewayModelCapabilities(model.provider, modelID);
+	const probed = PROBED_LIMITS.get(`${model.provider}\0${modelID}`);
 	return {
 		id: modelID,
 		name: model.name || fallback?.name || modelID,
@@ -527,13 +599,20 @@ function configFromIntegrationModel(
 				}
 			: {}),
 		input: inputModalities(model, fallback),
+		// A probed value outranks the upstream passthrough because it was measured
+		// against the endpoint pi actually calls: commandai advertises a 1000000
+		// window for stepfun/Step-3.5-Flash and then rejects anything over 262144.
 		contextWindow:
 			positiveLimit(model.limits?.context_window) ??
+			probed?.contextWindow ??
 			positiveLimit(model.upstream?.context_length) ??
 			fallback?.contextWindow ??
-			DERIVED_CONTEXT_WINDOWS.get(`${model.provider}\0${modelID}`) ??
 			128000,
-		maxTokens: model.limits?.max_output_tokens ?? fallback?.maxTokens ?? 4096,
+		maxTokens:
+			positiveLimit(model.limits?.max_output_tokens) ??
+			probed?.maxTokens ??
+			fallback?.maxTokens ??
+			4096,
 		cost: fallback?.cost ?? {
 			input: 0,
 			output: 0,
