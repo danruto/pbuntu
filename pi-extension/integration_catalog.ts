@@ -84,6 +84,12 @@ interface IntegrationModelExeDev {
 	mode?: string;
 }
 
+// Unnormalized passthrough of the provider's own model record. commandai leaves
+// `limits` empty for every model but reports the window here.
+interface IntegrationModelUpstream {
+	context_length?: number;
+}
+
 interface IntegrationModel {
 	id: string;
 	name?: string;
@@ -92,6 +98,7 @@ interface IntegrationModel {
 	apis?: string[];
 	architecture?: IntegrationModelArchitecture;
 	limits?: IntegrationModelLimits;
+	upstream?: IntegrationModelUpstream;
 	exe_dev?: IntegrationModelExeDev;
 }
 
@@ -404,6 +411,14 @@ function costCatalogIndex(
 	return out;
 }
 
+// A catalog entry that exists only to carry limits still leaves usage cost at
+// zero, so it must not silence the pricing warning.
+function hasPricing(fallback: CatalogModel | undefined): boolean {
+	const cost = fallback?.cost;
+	if (!cost) return false;
+	return Boolean(cost.input || cost.output || cost.cacheRead || cost.cacheWrite);
+}
+
 function fallbackCatalogModel(
 	costs: Map<string, CatalogModel>,
 	provider: string,
@@ -433,6 +448,52 @@ function gatewayModelCapabilities(provider: string, modelID: string) {
 		reasoning: true,
 		thinkingLevelMap: GATEWAY_GPT56_THINKING_LEVEL_MAP,
 	};
+}
+
+// exe.dev's llm integration leaves `limits` empty for opencode-go, and its
+// `upstream` passthrough is a bare OpenAI /v1/models record with no window in
+// it, so nothing at runtime describes these models. Each value below is the
+// smallest window any other provider in the same catalog reports for the same
+// base model. Lowest wins because opencode-go does not validate oversized
+// requests — it truncates silently, so guessing high corrupts answers without
+// surfacing an error, while guessing low only wastes context.
+// Models with no counterpart anywhere are absent on purpose and fall to the
+// default: hy3-preview, longcat-2.0, mimo-v2-omni, mimo-v2-pro, qwen3.5-plus.
+const DERIVED_CONTEXT_WINDOWS: ReadonlyMap<string, number> = new Map([
+	["opencode-go\0deepseek-v4-flash", 1000000],
+	["opencode-go\0deepseek-v4-flash-vision-exp", 1000000],
+	["opencode-go\0deepseek-v4-pro", 1000000],
+	["opencode-go\0glm-5", 200000],
+	["opencode-go\0glm-5.1", 200000],
+	["opencode-go\0glm-5.2", 1000000],
+	["opencode-go\0glm-5.3", 1000000],
+	["opencode-go\0glm-5.3-flash", 1048576],
+	["opencode-go\0gpt-5.6-luna", 1050000],
+	["opencode-go\0grok-4.5", 500000],
+	["opencode-go\0grok-4.6", 500000],
+	["opencode-go\0hy3", 262144],
+	["opencode-go\0hy4-preview", 1048576],
+	["opencode-go\0kimi-k2.5", 256000],
+	["opencode-go\0kimi-k2.6", 256000],
+	["opencode-go\0kimi-k2.7-code", 256000],
+	["opencode-go\0kimi-k3", 1000000],
+	["opencode-go\0mimo-v2.5", 1000000],
+	["opencode-go\0mimo-v2.5-pro", 1000000],
+	["opencode-go\0minimax-m2.5", 200000],
+	["opencode-go\0minimax-m2.7", 197000],
+	["opencode-go\0minimax-m3", 512000],
+	["opencode-go\0muse-spark-1.2-contributor", 1048576],
+	["opencode-go\0qwen3.6-plus", 200000],
+	["opencode-go\0qwen3.7-max", 1000000],
+	["opencode-go\0qwen3.7-plus", 262144],
+	["opencode-go\0qwen3.8-flash", 1000000],
+	["opencode-go\0qwen3.8-max", 1000000],
+]);
+
+function positiveLimit(value: number | undefined): number | undefined {
+	return typeof value === "number" && Number.isFinite(value) && value > 0
+		? value
+		: undefined;
 }
 
 function configFromIntegrationModel(
@@ -467,7 +528,11 @@ function configFromIntegrationModel(
 			: {}),
 		input: inputModalities(model, fallback),
 		contextWindow:
-			model.limits?.context_window ?? fallback?.contextWindow ?? 128000,
+			positiveLimit(model.limits?.context_window) ??
+			positiveLimit(model.upstream?.context_length) ??
+			fallback?.contextWindow ??
+			DERIVED_CONTEXT_WINDOWS.get(`${model.provider}\0${modelID}`) ??
+			128000,
 		maxTokens: model.limits?.max_output_tokens ?? fallback?.maxTokens ?? 4096,
 		cost: fallback?.cost ?? {
 			input: 0,
@@ -539,7 +604,8 @@ export function providerInfosFromIntegrationCatalogs(
 			const fallback = fallbackCatalogModel(costs, provider, modelID, model.id);
 			const config = configFromIntegrationModel(integration, model, fallback);
 			if (!config) continue;
-			if (!fallback) warnedMissingPricing.add(`${provider}/${modelID}`);
+			if (!hasPricing(fallback))
+				warnedMissingPricing.add(`${provider}/${modelID}`);
 
 			let entry = grouped.get(provider);
 			if (!entry) {

@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import test from "node:test";
 import {
 	discoverIntegrationCatalogs,
@@ -572,4 +573,130 @@ test("formats prompt integration availability with at most two names", () => {
 		integrationPromptAvailabilityLabel(["beta", "alpha", "beta", "gamma"]),
 		"alpha, beta, ...",
 	);
+});
+
+const liveCatalog = JSON.parse(
+	readFileSync(new URL("./models_fixture.json", import.meta.url), "utf8"),
+);
+
+function windowFor(providerKey: string, modelID: string): number | undefined {
+	const infos = providerInfosFromIntegrationCatalogs(
+		[
+			{
+				name: "llm",
+				baseURL: "https://llm.int.exe.xyz",
+				catalog: liveCatalog,
+			},
+		],
+		undefined,
+		() => {},
+	);
+	return infos
+		.get(providerKey)
+		?.config.models?.find((model) => model.id === `${modelID}@llm`)
+		?.contextWindow;
+}
+
+test("reads context windows out of the live catalog's upstream passthrough", () => {
+	// commandai ships no `limits` at all; every one of its models carries the
+	// window under upstream.context_length.
+	assert.equal(windowFor("exe-dev-commandai", "z-ai/glm-5.3-flash"), 1048576);
+	assert.equal(windowFor("exe-dev-commandai", "zai-org/GLM-5.3"), 1000000);
+
+	// The only fireworks models missing `limits` are its embedding/reranker pair,
+	// which advertise no protocol pi speaks and never become models at all — so
+	// fireworks needs no passthrough of its own.
+	assert.equal(
+		windowFor("exe-dev-fireworks", "accounts/fireworks/models/qwen3-embedding-8b"),
+		undefined,
+	);
+});
+
+test("keeps integration limits ahead of the upstream passthrough", () => {
+	// glm-5p3 reports both; the integration's normalized value must win.
+	assert.equal(
+		windowFor("exe-dev-fireworks", "accounts/fireworks/models/glm-5p3"),
+		1048576,
+	);
+	assert.equal(windowFor("exe-dev-anthropic", "claude-opus-5"), 1000000);
+});
+
+test("derives opencode-go windows the live catalog cannot supply", () => {
+	// opencode-go has neither `limits` nor a usable `upstream`, so these come
+	// from the derived table.
+	assert.equal(windowFor("exe-dev-opencode-go", "glm-5.3"), 1000000);
+	// Providers disagreed on these two; the lower value is the one we take.
+	assert.equal(windowFor("exe-dev-opencode-go", "minimax-m3"), 512000);
+	assert.equal(windowFor("exe-dev-opencode-go", "qwen3.7-plus"), 262144);
+	// No counterpart in any provider, so the default is the only answer left.
+	assert.equal(windowFor("exe-dev-opencode-go", "longcat-2.0"), 128000);
+});
+
+test("ignores unusable upstream context values", () => {
+	const infos = providerInfosFromIntegrationCatalogs(
+		[
+			{
+				name: "llm",
+				baseURL: "https://llm.int.exe.xyz",
+				catalog: {
+					schema_version: 1,
+					models: [
+						{
+							id: "commandai/zeroed",
+							name: "Zeroed",
+							provider: "commandai",
+							native_id: "zeroed",
+							apis: ["openai_chat"],
+							upstream: { context_length: 0 },
+							architecture: { input_modalities: ["text"] },
+							exe_dev: { mode: "byok" },
+						},
+					],
+				},
+			},
+		],
+		undefined,
+		() => {},
+	);
+	assert.equal(
+		infos.get("exe-dev-commandai")?.config.models?.[0]?.contextWindow,
+		128000,
+	);
+});
+
+test("still warns about pricing when a catalog entry carries only limits", () => {
+	const warnings: string[] = [];
+	providerInfosFromIntegrationCatalogs(
+		[
+			{
+				name: "llm",
+				baseURL: "https://llm.int.exe.xyz",
+				catalog: {
+					schema_version: 1,
+					models: [anthropicModel("claude-fable-5", "Claude Fable 5")],
+				},
+			},
+		],
+		{
+			schemaVersion: 1,
+			providers: [
+				{
+					id: "anthropic",
+					path: "anthropic",
+					models: [
+						{
+							id: "claude-fable-5",
+							input: ["text"],
+							contextWindow: 1000000,
+							cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
+						},
+					],
+				},
+			],
+		},
+		(message) => warnings.push(message),
+	);
+
+	assert.equal(warnings.length, 1);
+	assert.match(warnings[0] ?? "", /missing pricing for integration model/);
 });

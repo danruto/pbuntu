@@ -1,0 +1,645 @@
+{
+	"schema_version": 1,
+	"models": [
+		{
+			"id": "anthropic/claude-opus-5",
+			"name": "Claude Opus 5",
+			"provider": "anthropic",
+			"native_id": "claude-opus-5",
+			"apis": [
+				"anthropic_messages"
+			],
+			"upstream": {
+				"type": "model",
+				"id": "claude-opus-5",
+				"display_name": "Claude Opus 5",
+				"created_at": "2026-07-24T00:00:00Z",
+				"max_input_tokens": 1000000,
+				"max_tokens": 128000,
+				"capabilities": {
+					"batch": {
+						"supported": true
+					},
+					"citations": {
+						"supported": true
+					},
+					"code_execution": {
+						"supported": true
+					},
+					"context_management": {
+						"supported": true,
+						"clear_tool_uses_20250919": {
+							"supported": true
+						},
+						"clear_thinking_20251015": {
+							"supported": true
+						},
+						"compact_20260112": {
+							"supported": true
+						}
+					},
+					"effort": {
+						"supported": true,
+						"low": {
+							"supported": true
+						},
+						"medium": {
+							"supported": true
+						},
+						"high": {
+							"supported": true
+						},
+						"xhigh": {
+							"supported": true
+						},
+						"max": {
+							"supported": true
+						}
+					},
+					"image_input": {
+						"supported": true
+					},
+					"pdf_input": {
+						"supported": true
+					},
+					"structured_outputs": {
+						"supported": true
+					},
+					"thinking": {
+						"supported": true,
+						"types": {
+							"enabled": {
+								"supported": false
+							},
+							"adaptive": {
+								"supported": true
+							}
+						}
+					}
+				}
+			},
+			"architecture": {
+				"modality": "text+image+pdf->text",
+				"input_modalities": [
+					"text",
+					"image",
+					"pdf"
+				],
+				"output_modalities": [
+					"text"
+				],
+				"tokenizer": "anthropic"
+			},
+			"limits": {
+				"context_window": 1000000,
+				"max_output_tokens": 128000
+			},
+			"supported_parameters": [
+				"messages",
+				"max_tokens",
+				"temperature",
+				"top_p",
+				"stream",
+				"tools"
+			],
+			"exe_dev": {
+				"mode": "managed"
+			}
+		},
+		{
+			"id": "fireworks/glm-5p3",
+			"name": "GLM 5.3 (Fireworks)",
+			"provider": "fireworks",
+			"native_id": "accounts/fireworks/models/glm-5p3",
+			"apis": [
+				"openai_chat",
+				"openai_responses",
+				"anthropic_messages"
+			],
+			"upstream": {
+				"baseModelDetails": {
+					"checkpointFormat": "HUGGINGFACE",
+					"defaultPrecision": "PRECISION_UNSPECIFIED",
+					"huggingfaceFiles": [
+						".gitattributes",
+						"LICENSE",
+						"README.md",
+						"chat_template.jinja",
+						"config.json",
+						"generation_config.json",
+						"model-00001-of-00141.safetensors",
+						"model-00002-of-00141.safetensors",
+						"model-00003-of-00141.safetensors",
+						"model-00004-of-00141.safetensors",
+						"model-00005-of-00141.safetensors",
+						"model-00006-of-00141.safetensors",
+						"model-00007-of-00141.safetensors",
+						"model-00008-of-00141.safetensors",
+						"model-00009-of-00141.safetensors",
+						"model-00010-of-00141.safetensors",
+						"model-00011-of-00141.safetensors",
+						"model-00012-of-00141.safetensors",
+						"model-00013-of-00141.safetensors",
+						"model-00014-of-00141.safetensors",
+						"model-00015-of-00141.safetensors",
+						"model-00016-of-00141.safetensors",
+						"model-00017-of-00141.safetensors",
+						"model-00018-of-00141.safetensors",
+						"model-00019-of-00141.safetensors",
+						"model-00020-of-00141.safetensors",
+						"model-00021-of-00141.safetensors",
+						"model-00022-of-00141.safetensors",
+						"model-00023-of-00141.safetensors",
+						"model-00024-of-00141.safetensors",
+						"model-00025-of-00141.safetensors",
+						"model-00026-of-00141.safetensors",
+						"model-00027-of-00141.safetensors",
+						"model-00028-of-00141.safetensors",
+						"model-00029-of-00141.safetensors",
+						"model-00030-of-00141.safetensors",
+						"model-00031-of-00141.safetensors",
+						"model-00032-of-00141.safetensors",
+						"model-00033-of-00141.safetensors",
+						"model-00034-of-00141.safetensors",
+						"model-00035-of-00141.safetensors",
+						"model-00036-of-00141.safetensors",
+						"model-00037-of-00141.safetensors",
+						"model-00038-of-00141.safetensors",
+						"model-00039-of-00141.safetensors",
+						"model-00040-of-00141.safetensors",
+						"model-00041-of-00141.safetensors",
+						"model-00042-of-00141.safetensors",
+						"model-00043-of-00141.safetensors",
+						"model-00044-of-00141.safetensors",
+						"model-00045-of-00141.safetensors",
+						"model-00046-of-00141.safetensors",
+						"model-00047-of-00141.safetensors",
+						"model-00048-of-00141.safetensors",
+						"model-00049-of-00141.safetensors",
+						"model-00050-of-00141.safetensors",
+						"model-00051-of-00141.safetensors",
+						"model-00052-of-00141.safetensors",
+						"model-00053-of-00141.safetensors",
+						"model-00054-of-00141.safetensors",
+						"model-00055-of-00141.safetensors",
+						"model-00056-of-00141.safetensors",
+						"model-00057-of-00141.safetensors",
+						"model-00058-of-00141.safetensors",
+						"model-00059-of-00141.safetensors",
+						"model-00060-of-00141.safetensors",
+						"model-00061-of-00141.safetensors",
+						"model-00062-of-00141.safetensors",
+						"model-00063-of-00141.safetensors",
+						"model-00064-of-00141.safetensors",
+						"model-00065-of-00141.safetensors",
+						"model-00066-of-00141.safetensors",
+						"model-00067-of-00141.safetensors",
+						"model-00068-of-00141.safetensors",
+						"model-00069-of-00141.safetensors",
+						"model-00070-of-00141.safetensors",
+						"model-00071-of-00141.safetensors",
+						"model-00072-of-00141.safetensors",
+						"model-00073-of-00141.safetensors",
+						"model-00074-of-00141.safetensors",
+						"model-00075-of-00141.safetensors",
+						"model-00076-of-00141.safetensors",
+						"model-00077-of-00141.safetensors",
+						"model-00078-of-00141.safetensors",
+						"model-00079-of-00141.safetensors",
+						"model-00080-of-00141.safetensors",
+						"model-00081-of-00141.safetensors",
+						"model-00082-of-00141.safetensors",
+						"model-00083-of-00141.safetensors",
+						"model-00084-of-00141.safetensors",
+						"model-00085-of-00141.safetensors",
+						"model-00086-of-00141.safetensors",
+						"model-00087-of-00141.safetensors",
+						"model-00088-of-00141.safetensors",
+						"model-00089-of-00141.safetensors",
+						"model-00090-of-00141.safetensors",
+						"model-00091-of-00141.safetensors",
+						"model-00092-of-00141.safetensors",
+						"model-00093-of-00141.safetensors",
+						"model-00094-of-00141.safetensors",
+						"model-00095-of-00141.safetensors",
+						"model-00096-of-00141.safetensors",
+						"model-00097-of-00141.safetensors",
+						"model-00098-of-00141.safetensors",
+						"model-00099-of-00141.safetensors",
+						"model-00100-of-00141.safetensors",
+						"model-00101-of-00141.safetensors",
+						"model-00102-of-00141.safetensors",
+						"model-00103-of-00141.safetensors",
+						"model-00104-of-00141.safetensors",
+						"model-00105-of-00141.safetensors",
+						"model-00106-of-00141.safetensors",
+						"model-00107-of-00141.safetensors",
+						"model-00108-of-00141.safetensors",
+						"model-00109-of-00141.safetensors",
+						"model-00110-of-00141.safetensors",
+						"model-00111-of-00141.safetensors",
+						"model-00112-of-00141.safetensors",
+						"model-00113-of-00141.safetensors",
+						"model-00114-of-00141.safetensors",
+						"model-00115-of-00141.safetensors",
+						"model-00116-of-00141.safetensors",
+						"model-00117-of-00141.safetensors",
+						"model-00118-of-00141.safetensors",
+						"model-00119-of-00141.safetensors",
+						"model-00120-of-00141.safetensors",
+						"model-00121-of-00141.safetensors",
+						"model-00122-of-00141.safetensors",
+						"model-00123-of-00141.safetensors",
+						"model-00124-of-00141.safetensors",
+						"model-00125-of-00141.safetensors",
+						"model-00126-of-00141.safetensors",
+						"model-00127-of-00141.safetensors",
+						"model-00128-of-00141.safetensors",
+						"model-00129-of-00141.safetensors",
+						"model-00130-of-00141.safetensors",
+						"model-00131-of-00141.safetensors",
+						"model-00132-of-00141.safetensors",
+						"model-00133-of-00141.safetensors",
+						"model-00134-of-00141.safetensors",
+						"model-00135-of-00141.safetensors",
+						"model-00136-of-00141.safetensors",
+						"model-00137-of-00141.safetensors",
+						"model-00138-of-00141.safetensors",
+						"model-00139-of-00141.safetensors",
+						"model-00140-of-00141.safetensors",
+						"model-00141-of-00141.safetensors",
+						"model.safetensors.index.json",
+						"tokenizer.json",
+						"tokenizer_config.json"
+					],
+					"modelType": "glm_moe_dsa",
+					"moe": true,
+					"parameterCount": "743377019904",
+					"supportsFireattention": true,
+					"supportsMtp": false,
+					"tunable": false,
+					"worldSize": 1
+				},
+				"calibrated": false,
+				"cluster": "",
+				"contextLength": 1048576,
+				"conversationConfig": {
+					"style": "",
+					"system": "",
+					"template": ""
+				},
+				"createTime": "2026-08-28T05:39:11.035039Z",
+				"defaultDraftModel": "",
+				"defaultDraftTokenCount": 0,
+				"defaultSamplingParams": {},
+				"deployedModelRefs": [],
+				"deprecationDate": null,
+				"description": "GLM-5.3 uses the same base model as GLM-5.2 — every gain comes from post-training. Compared with GLM-5.2, it is much better at complex coding and long-horizon tasks",
+				"displayName": "GLM-5.3",
+				"encryptionState": "ENCRYPTION_STATE_PLAINTEXT",
+				"fineTuningJob": "",
+				"githubUrl": "",
+				"huggingFaceUrl": "https://huggingface.co/zai-org/GLM-5.3",
+				"id": "accounts/fireworks/models/glm-5p3",
+				"importedFrom": "",
+				"kind": "HF_BASE_MODEL",
+				"name": "accounts/fireworks/models/glm-5p3",
+				"object": "model",
+				"owned_by": "fireworks",
+				"peftDetails": {
+					"baseModel": "",
+					"baseModelType": "",
+					"mergeAddonModelName": "",
+					"r": 0,
+					"targetModules": []
+				},
+				"public": true,
+				"rlLoraTunable": false,
+				"rlTunable": false,
+				"serverlessModes": [],
+				"snapshotType": "FULL_SNAPSHOT",
+				"state": "READY",
+				"status": {
+					"code": "OK",
+					"message": ""
+				},
+				"supervisedLoraTunable": false,
+				"supportsImageInput": false,
+				"supportsLora": false,
+				"supportsServerless": true,
+				"supportsTools": true,
+				"teftDetails": null,
+				"trainingContextLength": 65536,
+				"updateTime": "2026-08-28T22:31:48.375402Z",
+				"useHfApplyChatTemplate": false,
+				"useTrainingV2": true
+			},
+			"architecture": {
+				"modality": "text->text",
+				"input_modalities": [
+					"text"
+				],
+				"output_modalities": [
+					"text"
+				],
+				"tokenizer": "fireworks"
+			},
+			"limits": {
+				"context_window": 1048576,
+				"max_output_tokens": 131072
+			},
+			"supported_parameters": [
+				"messages",
+				"max_tokens",
+				"temperature",
+				"top_p",
+				"stream",
+				"tools"
+			],
+			"exe_dev": {
+				"mode": "managed"
+			}
+		},
+		{
+			"id": "fireworks/qwen3-embedding-8b",
+			"name": "Qwen3 Embedding 8B",
+			"provider": "fireworks",
+			"native_id": "accounts/fireworks/models/qwen3-embedding-8b",
+			"apis": [
+				"openai_embeddings"
+			],
+			"upstream": {
+				"baseModelDetails": {
+					"checkpointFormat": "HUGGINGFACE",
+					"defaultPrecision": "BF16",
+					"huggingfaceFiles": [
+						".gitattributes",
+						"LICENSE",
+						"README.md",
+						"config.json",
+						"config_sentence_transformers.json",
+						"generation_config.json",
+						"merges.txt",
+						"model-00001-of-00004.safetensors",
+						"model-00002-of-00004.safetensors",
+						"model-00003-of-00004.safetensors",
+						"model-00004-of-00004.safetensors",
+						"model.safetensors.index.json",
+						"modules.json",
+						"tokenizer.json",
+						"tokenizer_config.json",
+						"vocab.json"
+					],
+					"modelType": "qwen3",
+					"moe": false,
+					"parameterCount": "8188515328",
+					"supportsFireattention": true,
+					"supportsMtp": false,
+					"tunable": false,
+					"worldSize": 1
+				},
+				"calibrated": false,
+				"cluster": "",
+				"contextLength": 40960,
+				"conversationConfig": {
+					"style": "jinja",
+					"system": "",
+					"template": "{%- if tools %}\n    {{- '<|im_start|>system\\n' }}\n    {%- if messages[0]['role'] == 'system' %}\n        {{- messages[0]['content'] }}\n    {%- else %}\n        {{- 'You are a helpful assistant.' }}\n    {%- endif %}\n    {{- \"\\n\\n# Tools\\n\\nYou may call one or more functions to assist with the user query.\\n\\nYou are provided with function signatures within <tools></tools> XML tags:\\n<tools>\" }}\n    {%- for tool in tools %}\n        {{- \"\\n\" }}\n        {{- tool | tojson }}\n    {%- endfor %}\n    {{- \"\\n</tools>\\n\\nFor each function call, return a json object with function name and arguments within <tool_call></tool_call> XML tags:\\n<tool_call>\\n{\\\"name\\\": <function-name>, \\\"arguments\\\": <args-json-object>}\\n</tool_call><|im_end|>\\n\" }}\n{%- else %}\n    {%- if messages[0]['role'] == 'system' %}\n        {{- '<|im_start|>system\\n' + messages[0]['content'] + '<|im_end|>\\n' }}\n    {%- else %}\n        {{- '<|im_start|>system\\nYou are a helpful assistant.<|im_end|>\\n' }}\n    {%- endif %}\n{%- endif %}\n{%- for message in messages %}\n    {%- if (message.role == \"user\") or (message.role == \"system\" and not loop.first) or (message.role == \"assistant\" and not message.tool_calls) %}\n        {{- '<|im_start|>' + message.role + '\\n' + message.content + '<|im_end|>' + '\\n' }}\n    {%- elif message.role == \"assistant\" %}\n        {{- '<|im_start|>' + message.role }}\n        {%- if message.content %}\n            {{- '\\n' + message.content }}\n        {%- endif %}\n        {%- for tool_call in message.tool_calls %}\n            {%- if tool_call.function is defined %}\n                {%- set tool_call = tool_call.function %}\n            {%- endif %}\n            {{- '\\n<tool_call>\\n{\"name\": \"' }}\n            {{- tool_call.name }}\n            {{- '\", \"arguments\": ' }}\n            {{- tool_call.arguments | tojson }}\n            {{- '}\\n</tool_call>' }}\n        {%- endfor %}\n        {{- '<|im_end|>\\n' }}\n    {%- elif message.role == \"tool\" %}\n        {%- if (loop.index0 == 0) or (messages[loop.index0 - 1].role != \"tool\") %}\n            {{- '<|im_start|>user' }}\n        {%- endif %}\n        {{- '\\n<tool_response>\\n' }}\n        {{- message.content }}\n        {{- '\\n</tool_response>' }}\n        {%- if loop.last or (messages[loop.index0 + 1].role != \"tool\") %}\n            {{- '<|im_end|>\\n' }}\n        {%- endif %}\n    {%- endif %}\n{%- endfor %}\n{%- if add_generation_prompt %}\n    {{- '<|im_start|>assistant\\n' }}\n{%- endif %}\n"
+				},
+				"createTime": "2025-08-20T16:24:50.233084Z",
+				"defaultDraftModel": "",
+				"defaultDraftTokenCount": 0,
+				"defaultSamplingParams": {},
+				"deployedModelRefs": [],
+				"deprecationDate": null,
+				"description": "The Qwen3 Embedding 8B model is the latest proprietary model of the Qwen family, specifically designed for text embedding tasks. This model inherits the exceptional multilingual capabilities, long-text understanding, and reasoning skills building upon the dense foundational models of the Qwen3 series. The model represents significant advancements in multiple text embedding tasks including text retrieval, code retrieval, text classification, text clustering.",
+				"displayName": "Qwen3 Embedding 8B",
+				"encryptionState": "ENCRYPTION_STATE_UNSPECIFIED",
+				"fineTuningJob": "",
+				"githubUrl": "",
+				"huggingFaceUrl": "https://huggingface.co/Qwen/Qwen3-Embedding-8B",
+				"id": "accounts/fireworks/models/qwen3-embedding-8b",
+				"importedFrom": "",
+				"kind": "EMBEDDING_MODEL",
+				"name": "accounts/fireworks/models/qwen3-embedding-8b",
+				"object": "model",
+				"owned_by": "fireworks",
+				"peftDetails": {
+					"baseModel": "",
+					"baseModelType": "",
+					"mergeAddonModelName": "",
+					"r": 0,
+					"targetModules": []
+				},
+				"public": true,
+				"rlLoraTunable": false,
+				"rlTunable": false,
+				"serverlessModes": [],
+				"snapshotType": "FULL_SNAPSHOT",
+				"state": "READY",
+				"status": {
+					"code": "OK",
+					"message": ""
+				},
+				"supervisedLoraTunable": false,
+				"supportsImageInput": false,
+				"supportsLora": false,
+				"supportsServerless": true,
+				"supportsTools": false,
+				"teftDetails": null,
+				"trainingContextLength": 131072,
+				"updateTime": "2026-08-28T22:31:48.375402Z",
+				"useHfApplyChatTemplate": false,
+				"useTrainingV2": false
+			},
+			"architecture": {
+				"modality": "text->embedding",
+				"input_modalities": [
+					"text"
+				],
+				"output_modalities": [
+					"embedding"
+				],
+				"tokenizer": "fireworks"
+			},
+			"supported_parameters": [
+				"input"
+			],
+			"exe_dev": {
+				"mode": "managed"
+			}
+		},
+		{
+			"id": "commandai/z-ai/glm-5.3-flash",
+			"name": "z-ai/glm-5.3-flash",
+			"provider": "commandai",
+			"native_id": "z-ai/glm-5.3-flash",
+			"apis": [
+				"openai_chat"
+			],
+			"upstream": {
+				"id": "z-ai/glm-5.3-flash",
+				"object": "model",
+				"created": 1788134813,
+				"owned_by": "command-code",
+				"name": "GLM-5.3 Flash",
+				"context_length": 1048576
+			},
+			"architecture": {
+				"modality": "text->text",
+				"input_modalities": [
+					"text"
+				],
+				"output_modalities": [
+					"text"
+				],
+				"tokenizer": "commandai"
+			},
+			"exe_dev": {
+				"mode": "byok"
+			}
+		},
+		{
+			"id": "commandai/zai-org/GLM-5.3",
+			"name": "zai-org/GLM-5.3",
+			"provider": "commandai",
+			"native_id": "zai-org/GLM-5.3",
+			"apis": [
+				"openai_chat"
+			],
+			"upstream": {
+				"id": "zai-org/GLM-5.3",
+				"object": "model",
+				"created": 1788134813,
+				"owned_by": "command-code",
+				"name": "GLM-5.3",
+				"context_length": 1000000
+			},
+			"architecture": {
+				"modality": "text->text",
+				"input_modalities": [
+					"text"
+				],
+				"output_modalities": [
+					"text"
+				],
+				"tokenizer": "commandai"
+			},
+			"exe_dev": {
+				"mode": "byok"
+			}
+		},
+		{
+			"id": "opencode-go/glm-5.3",
+			"name": "glm-5.3",
+			"provider": "opencode-go",
+			"native_id": "glm-5.3",
+			"apis": [
+				"openai_chat"
+			],
+			"upstream": {
+				"id": "glm-5.3",
+				"object": "model",
+				"created": 1788134813,
+				"owned_by": "opencode"
+			},
+			"architecture": {
+				"modality": "text->text",
+				"input_modalities": [
+					"text"
+				],
+				"output_modalities": [
+					"text"
+				],
+				"tokenizer": "opencode-go"
+			},
+			"exe_dev": {
+				"mode": "byok"
+			}
+		},
+		{
+			"id": "opencode-go/longcat-2.0",
+			"name": "longcat-2.0",
+			"provider": "opencode-go",
+			"native_id": "longcat-2.0",
+			"apis": [
+				"openai_chat"
+			],
+			"upstream": {
+				"id": "longcat-2.0",
+				"object": "model",
+				"created": 1788134813,
+				"owned_by": "opencode"
+			},
+			"architecture": {
+				"modality": "text->text",
+				"input_modalities": [
+					"text"
+				],
+				"output_modalities": [
+					"text"
+				],
+				"tokenizer": "opencode-go"
+			},
+			"exe_dev": {
+				"mode": "byok"
+			}
+		},
+		{
+			"id": "opencode-go/minimax-m3",
+			"name": "minimax-m3",
+			"provider": "opencode-go",
+			"native_id": "minimax-m3",
+			"apis": [
+				"openai_chat"
+			],
+			"upstream": {
+				"id": "minimax-m3",
+				"object": "model",
+				"created": 1788134813,
+				"owned_by": "opencode"
+			},
+			"architecture": {
+				"modality": "text->text",
+				"input_modalities": [
+					"text"
+				],
+				"output_modalities": [
+					"text"
+				],
+				"tokenizer": "opencode-go"
+			},
+			"exe_dev": {
+				"mode": "byok"
+			}
+		},
+		{
+			"id": "opencode-go/qwen3.7-plus",
+			"name": "qwen3.7-plus",
+			"provider": "opencode-go",
+			"native_id": "qwen3.7-plus",
+			"apis": [
+				"openai_chat"
+			],
+			"upstream": {
+				"id": "qwen3.7-plus",
+				"object": "model",
+				"created": 1788134813,
+				"owned_by": "opencode"
+			},
+			"architecture": {
+				"modality": "text->text",
+				"input_modalities": [
+					"text"
+				],
+				"output_modalities": [
+					"text"
+				],
+				"tokenizer": "opencode-go"
+			},
+			"exe_dev": {
+				"mode": "byok"
+			}
+		}
+	]
+}
