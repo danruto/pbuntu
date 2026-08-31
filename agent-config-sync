@@ -97,19 +97,35 @@ install_claude_plugins() {
     done < <(jq -r '.plugins[].name' "$manifest")
 }
 
-# install_pi_skills copies each plugin's instructions/ and standards/ in as
-# siblings, which is the topology a SKILL.md's ../../standards/... paths resolve
-# against.
+# install_pi_skills copies each plugin's instructions/ and its siblings in, which
+# is the topology a SKILL.md's ../../ paths resolve against. A skill reaches
+# past its own directory for standards, for the scripts it shells out to, and
+# for the plugin-root files those scripts read, so a copy carrying instructions
+# alone publishes skills whose every outward reference dangles.
+PI_PLUGIN_SIBLINGS="standards scripts executor-backends.json"
+
 install_pi_skills() {
     local dest=$1 target=$HOME/.pi/agent/skills/$2
-    local instructions
+    local instructions root sibling
+    local -a sources
 
+    # Rebuilt whole rather than merged in place. A per-plugin --delete is scoped
+    # to the directory it transfers, so a second plugin's instructions/ erased
+    # the first's; clearing once is both the fix for that and what retires a
+    # skill the repository has since dropped.
+    rm -rf "$target" || return 1
     for instructions in "$dest"/plugins/*/instructions; do
         [ -d "$instructions" ] || continue
+        root=$(dirname "$instructions")
+        sources=("$instructions")
+        for sibling in $PI_PLUGIN_SIBLINGS; do
+            [ -e "$root/$sibling" ] && sources+=("$root/$sibling")
+        done
         mkdir -p "$target" || return 1
-        rsync -a --delete \
-            "$instructions" "$(dirname "$instructions")/standards" "$target/" || return 1
+        rsync -a "${sources[@]}" "$target/" || return 1
     done
+
+    return 0
 }
 
 read -ra repos <<<"${AGENT_CONFIG_REPOS:-}"
