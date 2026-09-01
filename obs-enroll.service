@@ -5,12 +5,22 @@ Wants=network-online.target
 After=network-online.target
 
 [Service]
-Type=oneshot
+# obs-enroll ends by exec'ing the collector, so ExecStart's process is the
+# collector and lives as long as the machine does. Declaring that as oneshot
+# left the unit reporting "activating" forever and, worse, unsupervised: a
+# collector that died took observability with it and the silence read exactly
+# like a quiet machine.
+Type=exec
+Restart=on-failure
+# A failure here is a network one — the endpoint flapping, the release download
+# breaking mid-stream. Retrying in ten seconds outlasts that without spinning:
+# systemd's default start limit stops a unit that fails five times in ten
+# seconds, which this spacing cannot reach.
+RestartSec=10
 User=exedev
 Group=exedev
 EnvironmentFile=/exe.dev/obs.env
 ExecStart=/usr/local/bin/obs-enroll
-RemainAfterExit=no
 # The journal is readable through exedev's adm membership, but docker's
 # /var/lib/docker is 0710 root:root — the docker group grants the socket, never
 # the log tree. This is the narrowest grant that lets the filelog receiver in.
