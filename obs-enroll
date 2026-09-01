@@ -22,9 +22,10 @@ set -eu
 # The collector resolves ${env:...} out of its own environment, so a default
 # taken here has to be exported or it resolves to the empty string.
 export OBS_STREAM="${OBS_STREAM:-hostmetrics}"
-# Metrics and logs land in separate OpenObserve streams, and the stream is a
-# per-request header — so the two pipelines need an exporter each.
+# Each signal lands in its own OpenObserve stream, and the stream is a
+# per-request header — so each pipeline needs an exporter of its own.
 export OBS_LOG_STREAM="${OBS_LOG_STREAM:-logs}"
+export OBS_TRACE_STREAM="${OBS_TRACE_STREAM:-traces}"
 # Optional: skip TLS certificate verification (self-signed or private-CA
 # endpoints). Unset means verify against the system trust store.
 export OBS_TLS_INSECURE="${OBS_TLS_INSECURE:-false}"
@@ -121,6 +122,21 @@ receivers:
       - type: container
         format: docker
         add_metadata_from_filepath: false
+  # What anything running on this machine sends its own telemetry to. Nothing
+  # emits spans yet; instrumenting an app is the app's job, and this is the
+  # endpoint that has to exist before that job is worth starting.
+  #
+  # 0.0.0.0 rather than loopback because the senders are containers: each
+  # compose project gets its own bridge with its own gateway address, so there
+  # is no one host address to bind that all of them can reach. The VM carries no
+  # public interface and runs no host firewall, which puts the listener on the
+  # tailnet and the exe.dev private network — the same reach as its SSH.
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+      http:
+        endpoint: 0.0.0.0:4318
 
 processors:
   memory_limiter:
@@ -168,17 +184,32 @@ exporters:
       stream-name: ${env:OBS_LOG_STREAM}
     tls:
       insecure_skip_verify: ${env:OBS_TLS_INSECURE}
+  otlphttp/openobserve_traces:
+    endpoint: ${env:OBS_ENDPOINT}/api/${env:OBS_ORG}
+    headers:
+      Authorization: "Basic ${env:OBS_BASIC_AUTH}"
+      stream-name: ${env:OBS_TRACE_STREAM}
+    tls:
+      insecure_skip_verify: ${env:OBS_TLS_INSECURE}
 
 service:
   pipelines:
+    # otlp joins every pipeline, not just traces. An app that emits spans
+    # usually emits metrics and logs over the same exporter, and a machine that
+    # accepted one of the three while dropping the others silently would be a
+    # worse answer than accepting none.
     metrics:
-      receivers: [hostmetrics]
+      receivers: [hostmetrics, otlp]
       processors: [memory_limiter, resourcedetection, batch]
       exporters: [otlphttp/openobserve]
     logs:
-      receivers: [journald, filelog/docker]
+      receivers: [journald, filelog/docker, otlp]
       processors: [memory_limiter, filter/self, resourcedetection, batch]
       exporters: [otlphttp/openobserve_logs]
+    traces:
+      receivers: [otlp]
+      processors: [memory_limiter, resourcedetection, batch]
+      exporters: [otlphttp/openobserve_traces]
 YAML
 
 exec "$COLLECTOR" --config "$CONFIG"
