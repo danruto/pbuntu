@@ -1,5 +1,5 @@
 [Unit]
-Description=Enroll this VM for OpenObserve metrics (lazy)
+Description=Enroll this VM for OpenObserve metrics and logs (lazy)
 ConditionPathExists=/exe.dev/obs.env
 Wants=network-online.target
 After=network-online.target
@@ -11,6 +11,11 @@ Group=exedev
 EnvironmentFile=/exe.dev/obs.env
 ExecStart=/usr/local/bin/obs-enroll
 RemainAfterExit=no
+# The journal is readable through exedev's adm membership, but docker's
+# /var/lib/docker is 0710 root:root — the docker group grants the socket, never
+# the log tree. This is the narrowest grant that lets the filelog receiver in.
+AmbientCapabilities=CAP_DAC_READ_SEARCH
+CapabilityBoundingSet=CAP_DAC_READ_SEARCH
 Environment=HOME=/home/exedev
 Environment=USER=exedev
 Environment=PATH=/home/exedev/.local/bin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
