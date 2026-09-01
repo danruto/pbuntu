@@ -74,6 +74,7 @@ OBS_ENDPOINT=https://pb-obs.exe.xyz
 OBS_ORG=default
 OBS_USER=root@example.com
 # Optional:
+# OTEL_RESOURCE_ATTRIBUTES=project=noto,role=dev   # who this machine is
 # OBS_STREAM=hostmetrics            # default; per-host streams are fine too
 # OBS_TLS_INSECURE=true             # skip TLS verification (private CA)
 # OBS_COLLECTOR_VERSION=v0.159.0    # pin the collector release (default latest)
@@ -90,6 +91,14 @@ does not answer, or the credentials are rejected, the script leaves the VM
 exactly as the image built it and exits cleanly (`systemctl status obs-enroll`
 shows why). The collector's default stream is the shared `hostmetrics`; set
 `OBS_STREAM` for a per-machine or per-deployment stream.
+
+Every sample carries the machine it was read on. The collector's
+`resourcedetection` processor supplies `host.name` from the system, and adds
+whatever `OTEL_RESOURCE_ATTRIBUTES` names on top — the standard
+`key=value,key=value` form, which is how a deployment labels a machine with its
+own vocabulary (`project`, `role`) without this image knowing either word. A
+fleet sharing one stream stays separable by those attributes, so per-machine
+streams remain a choice rather than the only way to tell two VMs apart.
 
 ## Agent configuration sync
 

@@ -107,6 +107,18 @@ processors:
     check_interval: 5s
     limit_percentage: 80
     spike_limit_percentage: 25
+  # Without this every VM's samples arrive indistinguishable: the hostmetrics
+  # receiver labels nothing with the machine it read. The system detector
+  # supplies host.name; the env detector adds whatever the provisioning layer
+  # put in OTEL_RESOURCE_ATTRIBUTES, which is where a deployment names the
+  # machine's role in its own vocabulary. Unset, the env detector contributes
+  # nothing and the hostname still lands.
+  resourcedetection:
+    detectors: [env, system]
+    timeout: 5s
+    override: false
+    system:
+      hostname_sources: [os]
   batch:
     send_batch_size: 1000
     timeout: 5s
@@ -124,7 +136,7 @@ service:
   pipelines:
     metrics:
       receivers: [hostmetrics]
-      processors: [memory_limiter, batch]
+      processors: [memory_limiter, resourcedetection, batch]
       exporters: [otlphttp/openobserve]
 YAML
 
