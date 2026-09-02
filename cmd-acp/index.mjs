@@ -11,7 +11,11 @@
 //     (agent_message_chunk, tool_call, tool_call_update) and finish the turn
 //     when the result line arrives;
 //   - later prompts continue the same command-code session (--continue) so
-//     conversation context is preserved.
+//     conversation context is preserved;
+//   - the model catalog comes from `cmd --list-models` and is advertised on
+//     session/new, because paseo refuses to create an agent whose --model the
+//     provider does not list; `session/set_model` then picks the one each
+//     `cmd -p` turn runs with.
 //
 // Register the result as a paseo ACP provider:
 //
@@ -42,6 +46,13 @@ const CMD_FLAGS = (process.env.CMD_ACP_FLAGS || "--yolo --trust --skip-onboardin
   .split(/\s+/)
   .filter(Boolean);
 
+// Model ids for the catalog, comma-separated, first one the default. Set to
+// bypass `cmd --list-models` on a host where that table is unavailable.
+const CMD_MODELS_OVERRIDE = (process.env.CMD_ACP_MODELS || "")
+  .split(",")
+  .map((s) => s.trim())
+  .filter(Boolean);
+
 function log(...args) {
   // stderr only — stdout is the ACP channel.
   console.error("[cmd-acp]", ...args);
@@ -54,7 +65,7 @@ function log(...args) {
 // Run one `cmd -p` turn. `continueFrom` is an optional command-code session id
 // to resume (--continue). Returns { lines } where lines is the full NDJSON
 // stdout (event + result frames) — the caller drives the notification stream.
-function runCmdTurn({ prompt, cwd, continueFrom }) {
+function runCmdTurn({ prompt, cwd, continueFrom, model }) {
   return new Promise((resolve, reject) => {
     const args = [
       "-p",
@@ -63,6 +74,9 @@ function runCmdTurn({ prompt, cwd, continueFrom }) {
       "json",
       ...CMD_FLAGS,
     ];
+    if (model) {
+      args.push("--model", model);
+    }
     if (continueFrom) {
       args.push("--continue");
     }
@@ -88,6 +102,49 @@ function runCmdTurn({ prompt, cwd, continueFrom }) {
       resolve({ stdout: stdoutBuf });
     });
   });
+}
+
+// The catalog paseo validates --model against. `cmd --list-models` prints a
+// human table: one `<provider>/<id>  <description>` row per model, the default
+// row's description ending in "(default)". Rows without a slash are section
+// headings. Resolved once per process; an empty result advertises nothing.
+let modelCatalog = null;
+function listModels() {
+  if (modelCatalog) return modelCatalog;
+  modelCatalog = (async () => {
+    if (CMD_MODELS_OVERRIDE.length) {
+      return {
+        currentModelId: CMD_MODELS_OVERRIDE[0],
+        availableModels: CMD_MODELS_OVERRIDE.map((modelId) => ({ modelId, name: modelId })),
+      };
+    }
+    let stdout = "";
+    try {
+      stdout = await new Promise((resolve, reject) => {
+        const child = spawn(CMD_BIN, ["--list-models"], { env: process.env, stdio: ["ignore", "pipe", "inherit"] });
+        let buf = "";
+        child.stdout.setEncoding("utf8");
+        child.stdout.on("data", (chunk) => (buf += chunk));
+        child.on("error", reject);
+        child.on("close", () => resolve(buf));
+      });
+    } catch (err) {
+      log("model listing failed:", err.message);
+    }
+    const availableModels = [];
+    let currentModelId = null;
+    for (const line of stdout.split("\n")) {
+      const match = /^(\S+\/\S+)\s{2,}(.*)$/.exec(line.trim());
+      if (!match) continue;
+      const [, modelId, description] = match;
+      availableModels.push({ modelId, name: modelId, description });
+      if (/\(default\)\s*$/.test(description)) currentModelId = modelId;
+    }
+    if (!currentModelId && availableModels.length) currentModelId = availableModels[0].modelId;
+    log(`model catalog: ${availableModels.length} models, default ${currentModelId}`);
+    return { currentModelId, availableModels };
+  })();
+  return modelCatalog;
 }
 
 // Parse the NDJSON output into a list of frames.
@@ -154,9 +211,32 @@ class CmdAcpAgent {
   async newSession(params) {
     const sessionId = randomId();
     const cwd = params.cwd || process.cwd();
-    this.sessions.set(sessionId, { id: sessionId, cwd, cmdSessionId: null, activeRun: null });
+    const models = await listModels();
+    this.sessions.set(sessionId, {
+      id: sessionId,
+      cwd,
+      cmdSessionId: null,
+      activeRun: null,
+      model: models.currentModelId,
+    });
     log(`new session ${sessionId} cwd=${cwd}`);
-    return { sessionId };
+    // `models` is ACP's unstable model-state extension; paseo reads it to
+    // build the provider catalog and to know which selection it starts from.
+    return models.availableModels.length ? { sessionId, models } : { sessionId };
+  }
+
+  async setModel(params) {
+    const session = this.sessions.get(params.sessionId);
+    if (!session) {
+      throw new acp.RequestError(-32002, `Session ${params.sessionId} not found`);
+    }
+    const models = await listModels();
+    if (!models.availableModels.some((m) => m.modelId === params.modelId)) {
+      throw new acp.RequestError(-32602, `Unknown model ${params.modelId}`);
+    }
+    session.model = params.modelId;
+    log(`session ${session.id} model=${session.model}`);
+    return {};
   }
 
   async authenticate() {
@@ -185,6 +265,7 @@ class CmdAcpAgent {
         prompt: text,
         cwd: session.cwd,
         continueFrom: session.cmdSessionId,
+        model: session.model,
       });
       const frames = parseFrames(stdout);
       const result = await this.emitFrames(session, frames, cx, controller.signal);
@@ -357,6 +438,8 @@ Environment:
   CMD_ACP_CMD            command-code binary (default: cmd)
   CMD_ACP_FLAGS          extra flags for every cmd -p run
                          (default: --yolo --trust --skip-onboarding)
+  CMD_ACP_MODELS         comma-separated model ids to advertise instead of
+                         parsing \`cmd --list-models\`; the first is the default
 `;
 
 if (process.argv.includes("--help") || process.argv.includes("-h")) {
@@ -381,6 +464,10 @@ acp
   .onRequest("authenticate", (ctx) => agentImpl.authenticate(ctx.params))
   .onRequest("session/prompt", (ctx) =>
     agentImpl.prompt(ctx.params, ctx.client),
+  )
+  // Not in the SDK's method table yet, so it needs its own params parser.
+  .onRequest("session/set_model", (params) => params, (ctx) =>
+    agentImpl.setModel(ctx.params),
   )
   .onNotification("session/cancel", (ctx) => agentImpl.cancel(ctx.params))
   .connect(stream);
