@@ -33,6 +33,9 @@
 
 import * as acp from "@agentclientprotocol/sdk";
 import { spawn } from "node:child_process";
+import { readFileSync } from "node:fs";
+import { homedir } from "node:os";
+import { join } from "node:path";
 import { Readable, Writable } from "node:stream";
 
 const CMD_BIN = process.env.CMD_ACP_CMD || "cmd";
@@ -139,6 +142,15 @@ function listModels() {
       const [, modelId, description] = match;
       availableModels.push({ modelId, name: modelId, description });
       if (/\(default\)\s*$/.test(description)) currentModelId = modelId;
+    }
+    // cmd marks its own catalog's default, but the model it actually runs is
+    // the one in its config file (the image points that at the gateway), so
+    // prefer that whenever it is listed.
+    try {
+      const configured = JSON.parse(readFileSync(join(homedir(), ".commandcode", "config.json"), "utf8")).model;
+      if (availableModels.some((m) => m.modelId === configured)) currentModelId = configured;
+    } catch {
+      // No config or no model in it: the catalog's own default stands.
     }
     if (!currentModelId && availableModels.length) currentModelId = availableModels[0].modelId;
     log(`model catalog: ${availableModels.length} models, default ${currentModelId}`);
@@ -376,9 +388,10 @@ class CmdAcpAgent {
       }
     }
 
-    // Send the final answer as the last chunk if it isn't already streamed.
+    // The result line repeats what the text_delta frames already streamed, so
+    // it is only worth sending when nothing was.
     const finalText = result?.finalText;
-    if (finalText && !abortSignal.aborted) {
+    if (finalText && !messageId && !abortSignal.aborted) {
       await cx.notify(acp.methods.client.session.update, {
         sessionId: session.id,
         update: {
