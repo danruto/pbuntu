@@ -14,8 +14,13 @@ Model ids and limits come from the gateway's own catalog
 
 The dev image also bakes two runtime settings alongside the provider config:
 
-- `~/.commandcode/config.json` — `{"localOnly": true}` keeps cmd off the
-  Command Code backend; all traffic goes to the gateway.
+- `~/.commandcode/config.json` — `{"localOnly": true, "model":
+  "exe-llm/deepseek/deepseek-v4-flash"}` keeps cmd off the Command Code
+  backend; all traffic goes to the gateway. The default model needs the
+  `exe-llm/` prefix: cmd resolves a bare id against its own catalog first, and
+  the gateway reuses the upstream ids, so an unprefixed one is sent to the
+  Command Code backend and refused under `localOnly`. Pick any other model
+  with `-m exe-llm/<id>`.
 - `export COMMAND_CODE_API_KEY=exe-gateway` prepended to `~/.bashrc`, above
   the interactive guard, so pb-executor's non-interactive shells (which
   source `~/.bashrc` and return at the guard) still set the gateway key.

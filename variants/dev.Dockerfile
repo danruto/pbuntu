@@ -41,11 +41,16 @@ RUN npm install -g command-code@1.38.2 && \
 # keeps cmd off the Command Code backend entirely — everything runs against
 # the gateway.
 #
+# The default model must carry the provider prefix. cmd resolves a bare id
+# against its own catalog before the BYOK providers, and the gateway reuses the
+# upstream ids, so an unprefixed default is routed to the Command Code backend
+# and refused under localOnly.
+#
 # COPY rather than RUN cp: a RUN executes inside the image, where the build
 # context does not exist. COPY names its owner because the build runs as exedev
 # by here and COPY still lands root-owned otherwise.
 COPY --chown=exedev:exedev configs/command-code/providers.json /home/exedev/.commandcode/providers.json
-RUN printf '%s\n' '{"localOnly": true}' > /home/exedev/.commandcode/config.json
+RUN printf '%s\n' '{"localOnly": true, "model": "exe-llm/deepseek/deepseek-v4-flash"}' > /home/exedev/.commandcode/config.json
 
 # pb-executor spawns cmd in non-interactive shells that source ~/.bashrc and
 # return at the interactive guard, so the gateway key must sit above it —
@@ -69,6 +74,10 @@ RUN cd /opt/cmd-acp && \
 # Register command-code as a paseo ACP provider. The daemon merges this into
 # its config at first boot; the paseo-bootstrap unit (provisioned at VM
 # creation) owns the rest of ~/.paseo.
+#
+# The gateway key is repeated here because the daemon is a systemd unit: it
+# never sources ~/.bashrc, and cmd refuses to run without the variable even
+# though the gateway ignores its value.
 USER exedev
 RUN mkdir -p /home/exedev/.paseo && \
     printf '%s\n' \
@@ -78,7 +87,8 @@ RUN mkdir -p /home/exedev/.paseo && \
       '      "command-code": {' \
       '        "extends": "acp",' \
       '        "label": "Command Code",' \
-      '        "command": ["/usr/local/bin/cmd-acp"]' \
+      '        "command": ["/usr/local/bin/cmd-acp"],' \
+      '        "env": { "COMMAND_CODE_API_KEY": "exe-gateway" }' \
       '      }' \
       '    }' \
       '  }' \
