@@ -42,9 +42,11 @@ const CMD_BIN = process.env.CMD_ACP_CMD || "cmd";
 
 // Extra flags for every `cmd -p` invocation. --yolo lets the agent write
 // files/run commands without a TTY permission prompt; --trust and
-// --skip-onboarding avoid first-run interactive prompts. Override via
-// CMD_ACP_FLAGS (space-separated) if you want a stricter policy.
-const CMD_FLAGS = (process.env.CMD_ACP_FLAGS || "--yolo --trust --skip-onboarding")
+// --skip-onboarding avoid first-run interactive prompts. --max-turns lifts the
+// CLI default of 100, which a long agent turn hits routinely. Override via
+// CMD_ACP_FLAGS (space-separated) if you want a stricter policy — the override
+// replaces this list wholesale, so repeat the flags you still want.
+const CMD_FLAGS = (process.env.CMD_ACP_FLAGS || "--yolo --trust --skip-onboarding --max-turns 1000")
   .trim()
   .split(/\s+/)
   .filter(Boolean);
@@ -99,7 +101,14 @@ function runCmdTurn({ prompt, cwd, continueFrom, model }) {
     child.on("error", reject);
     child.on("close", (code) => {
       if (code !== 0) {
-        reject(new Error(`${CMD_BIN} exited with code ${code}`));
+        // Exit 8 is the --max-turns cap, not a crash.
+        reject(
+          new Error(
+            code === 8
+              ? `${CMD_BIN} hit its --max-turns cap; raise it via CMD_ACP_FLAGS`
+              : `${CMD_BIN} exited with code ${code}`,
+          ),
+        );
         return;
       }
       resolve({ stdout: stdoutBuf });
