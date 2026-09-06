@@ -23,7 +23,8 @@ RUN echo 'echo -e "\e[1;36m● dev variant — project development VM\e[0m"' >> 
 # under systemd's default PATH, so the CLI goes to a system prefix — not the
 # user-writable NPM_CONFIG_PREFIX the base image sets.
 RUN npm install -g --prefix=/usr/local @getpaseo/cli@0.6.1 && \
-    /usr/local/bin/paseo --version
+    /usr/local/bin/paseo --version && \
+    npm cache clean --force
 
 # Command Code — the standalone CLI harness. Pinned to a specific version so
 # image rebuilds are reproducible; bump deliberately (and verify) rather than
@@ -33,7 +34,8 @@ RUN npm install -g --prefix=/usr/local @getpaseo/cli@0.6.1 && \
 # contexts, the same reason paseo installs to a system prefix.
 USER exedev
 RUN npm install -g command-code@1.38.2 && \
-    /home/exedev/.local/bin/command-code --version
+    /home/exedev/.local/bin/command-code --version && \
+    npm cache clean --force
 
 # Bake the BYOK provider config: the exe.dev LLM integration gateway
 # (keyless inside exe.dev VMs). Changes apply live, so a user edit or
@@ -64,12 +66,24 @@ RUN ln -sf /home/exedev/.local/bin/command-code /usr/local/bin/command-code && \
 # cmd-acp — minimal ACP (Agent Client Protocol) bridge so paseo can drive
 # command-code as a provider. Installed to a system prefix: paseo's daemon
 # launches it by bare name under a non-interactive environment.
+#
+# The whole directory is copied, not just the entrypoint: the bridge imports
+# routing.mjs, and `just cmd-acp-sync` ships the same set, so a VM patched in
+# place and a VM booted fresh carry identical modules.
+#
+# The version is pinned as a build arg so an image built from a checkout whose
+# cmd-acp/package.json has moved does not silently bake a different bridge —
+# the build fails instead, and the pin is what the operator bumps.
+ARG CMD_ACP_VERSION=0.2.0
 COPY cmd-acp/ /opt/cmd-acp/
 RUN cd /opt/cmd-acp && \
+    node -e 'const v=require("/opt/cmd-acp/package.json").version; \
+      if (v !== process.argv[1]) { console.error(`cmd-acp version ${v} does not match pin ${process.argv[1]}`); process.exit(1) }' "$CMD_ACP_VERSION" && \
     npm install --omit=dev --no-audit --no-fund && \
     ln -sf /opt/cmd-acp/index.mjs /usr/local/bin/cmd-acp && \
     chmod +x /usr/local/bin/cmd-acp && \
-    /usr/local/bin/cmd-acp --help >/dev/null 2>&1 || true
+    (/usr/local/bin/cmd-acp --version >/dev/null 2>&1 || true) && \
+    npm cache clean --force
 
 # Register command-code as a paseo ACP provider. The daemon merges this into
 # its config at first boot; the paseo-bootstrap unit (provisioned at VM

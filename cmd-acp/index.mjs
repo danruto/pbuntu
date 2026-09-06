@@ -15,7 +15,10 @@
 //   - the model catalog comes from `cmd --list-models` and is advertised on
 //     session/new, because paseo refuses to create an agent whose --model the
 //     provider does not list; `session/set_model` then picks the one each
-//     `cmd -p` turn runs with.
+//     `cmd -p` turn runs with. Both spellings of a BYOK model are listed, and
+//     this host can only run one of them, so the catalog is filtered to the
+//     runnable spelling and a selection of the other is rewritten — see
+//     routing.mjs.
 //
 // Register the result as a paseo ACP provider:
 //
@@ -38,7 +41,16 @@ import { homedir } from "node:os";
 import { join } from "node:path";
 import { Readable, Writable } from "node:stream";
 
+import { defaultModelId, detectHost, filterCatalog, resolveModelId } from "./routing.mjs";
+
 const CMD_BIN = process.env.CMD_ACP_CMD || "cmd";
+
+// Read rather than import: package.json is data, and a JSON import assertion
+// would tie this module to a Node flag. Kept in step with the version
+// variants/dev.Dockerfile pins.
+const CMD_ACP_VERSION = JSON.parse(
+  readFileSync(new URL("./package.json", import.meta.url), "utf8"),
+).version;
 
 // Extra flags for every `cmd -p` invocation. --yolo lets the agent write
 // files/run commands without a TTY permission prompt; --trust and
@@ -120,6 +132,11 @@ function runCmdTurn({ prompt, cwd, continueFrom, model }) {
 // human table: one `<provider>/<id>  <description>` row per model, the default
 // row's description ending in "(default)". Rows without a slash are section
 // headings. Resolved once per process; an empty result advertises nothing.
+//
+// The table lists two spellings of a model a BYOK provider carries — a bare
+// `deepseek/…` and a provider-prefixed `exe-llm/deepseek/…` — and under
+// `localOnly` only the prefixed one can run, so the catalog is filtered to the
+// runnable spelling. See routing.mjs.
 let modelCatalog = null;
 function listModels() {
   if (modelCatalog) return modelCatalog;
@@ -143,29 +160,40 @@ function listModels() {
     } catch (err) {
       log("model listing failed:", err.message);
     }
-    const availableModels = [];
-    let currentModelId = null;
+    const listed = [];
+    let listedDefault = null;
     for (const line of stdout.split("\n")) {
       const match = /^(\S+\/\S+)\s{2,}(.*)$/.exec(line.trim());
       if (!match) continue;
       const [, modelId, description] = match;
-      availableModels.push({ modelId, name: modelId, description });
-      if (/\(default\)\s*$/.test(description)) currentModelId = modelId;
+      listed.push({ modelId, name: modelId, description });
+      if (/\(default\)\s*$/.test(description)) listedDefault = modelId;
     }
+
+    const host = detectHost();
     // cmd marks its own catalog's default, but the model it actually runs is
     // the one in its config file (the image points that at the gateway), so
-    // prefer that whenever it is listed.
-    try {
-      const configured = JSON.parse(readFileSync(join(homedir(), ".commandcode", "config.json"), "utf8")).model;
-      if (availableModels.some((m) => m.modelId === configured)) currentModelId = configured;
-    } catch {
-      // No config or no model in it: the catalog's own default stands.
-    }
-    if (!currentModelId && availableModels.length) currentModelId = availableModels[0].modelId;
-    log(`model catalog: ${availableModels.length} models, default ${currentModelId}`);
+    // prefer that whenever it resolves.
+    const preferred = configuredModel() ?? listedDefault;
+    const availableModels = filterCatalog(listed, host);
+    const currentModelId = defaultModelId(availableModels, host, preferred);
+    log(
+      `model catalog: ${listed.length} listed, ${availableModels.length} runnable` +
+        `${host.localOnly ? " (localOnly)" : ""}, default ${currentModelId}`,
+    );
     return { currentModelId, availableModels };
   })();
   return modelCatalog;
+}
+
+// The model cmd's own config file points at, if any.
+function configuredModel() {
+  try {
+    const model = JSON.parse(readFileSync(join(homedir(), ".commandcode", "config.json"), "utf8")).model;
+    return typeof model === "string" && model ? model : null;
+  } catch {
+    return null;
+  }
 }
 
 // Parse the NDJSON output into a list of frames.
@@ -224,7 +252,7 @@ class CmdAcpAgent {
       agentInfo: {
         name: "cmd-acp",
         title: "Command Code (via cmd-acp)",
-        version: "0.1.0",
+        version: CMD_ACP_VERSION,
       },
     };
   }
@@ -252,11 +280,15 @@ class CmdAcpAgent {
       throw new acp.RequestError(-32002, `Session ${params.sessionId} not found`);
     }
     const models = await listModels();
-    if (!models.availableModels.some((m) => m.modelId === params.modelId)) {
+    // paseo only offers ids from the filtered catalog, but it may pass back a
+    // spelling this host routes differently (a bare id whose twin is the
+    // runnable one), so resolve rather than requiring an exact match.
+    const modelId = resolveModelId(params.modelId, detectHost(), models.availableModels);
+    if (!modelId || !models.availableModels.some((m) => m.modelId === modelId)) {
       throw new acp.RequestError(-32602, `Unknown model ${params.modelId}`);
     }
-    session.model = params.modelId;
-    log(`session ${session.id} model=${session.model}`);
+    session.model = modelId;
+    log(`session ${session.id} model=${modelId}`);
     return {};
   }
 
@@ -469,7 +501,7 @@ if (process.argv.includes("--help") || process.argv.includes("-h")) {
   process.exit(0);
 }
 if (process.argv.includes("--version") || process.argv.includes("-v")) {
-  process.stdout.write("cmd-acp 0.1.0\n");
+  process.stdout.write(`cmd-acp ${CMD_ACP_VERSION}\n`);
   process.exit(0);
 }
 

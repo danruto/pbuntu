@@ -1,0 +1,43 @@
+#!/bin/sh
+# Drop toolchains this VM will never use. The image ships every language so
+# one build serves every project; the disk quota is pooled filesystem usage,
+# so each unused toolchain costs on every VM. Run by hand after provisioning:
+#
+#   pb-slim            list groups and what each holds
+#   pb-slim rust go    remove those groups
+#
+# Only self-contained installs are listed. Anything wired into systemd or a
+# paseo provider (shelley, pi, command-code, bb) stays.
+set -eu
+
+paths() {
+    case "$1" in
+        rust)       echo /home/exedev/.rustup /home/exedev/.cargo ;;
+        go)         echo /usr/local/go /home/exedev/go ;;
+        bun)        echo /usr/local/bin/bun /home/exedev/.bun ;;
+        uv)         echo /usr/local/bin/uv /usr/local/bin/uvx ;;
+        codex)      echo /usr/local/bin/codex /home/exedev/.codex ;;
+        claude)     echo /usr/local/bin/claude ;;
+        playwright) echo /home/exedev/.cache/ms-playwright ;;
+        *)          echo "pb-slim: unknown group '$1'" >&2; exit 2 ;;
+    esac
+}
+groups="rust go bun uv codex claude playwright"
+
+if [ $# -eq 0 ]; then
+    for g in $groups; do
+        # shellcheck disable=SC2046
+        size=$(sudo du -shc $(paths "$g") 2>/dev/null | tail -1 | cut -f1)
+        printf '%-11s %6s  %s\n' "$g" "${size:-0}" "$(paths "$g")"
+    done
+    exit 0
+fi
+
+for g in "$@"; do paths "$g" >/dev/null; done
+before=$(df -B1 --output=used / | tail -1)
+for g in "$@"; do
+    # shellcheck disable=SC2046
+    sudo rm -rf $(paths "$g")
+done
+after=$(df -B1 --output=used / | tail -1)
+echo "pb-slim: freed $(( (before - after) / 1048576 )) MiB, now $(df -h --output=used / | tail -1 | tr -d ' ') used"

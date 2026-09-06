@@ -464,7 +464,10 @@ function gatewayModelCapabilities(provider: string, modelID: string) {
 // while guessing low only wastes budget.
 //
 // 73 of 96 models resolved against pb-base.exe.xyz.
-const PROBED_LIMITS: ReadonlyMap<
+//
+// Exported for scripts/gen-cmd-providers.mjs, which bakes the same ceilings
+// into cmd's providers.json.
+export const PROBED_LIMITS: ReadonlyMap<
 	string,
 	{ contextWindow?: number; maxTokens?: number }
 > = new Map([

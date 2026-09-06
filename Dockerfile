@@ -290,8 +290,9 @@ RUN chmod 644 /etc/systemd/system/obs-enroll.service && \
 # a repository nor any content of one is baked into the image.
 COPY agent-config.service /etc/systemd/system/agent-config.service
 COPY agent-config-sync /usr/local/bin/agent-config-sync
+COPY pb-slim /usr/local/bin/pb-slim
 RUN chmod 644 /etc/systemd/system/agent-config.service && \
-    chmod 755 /usr/local/bin/agent-config-sync && \
+    chmod 755 /usr/local/bin/agent-config-sync /usr/local/bin/pb-slim && \
     systemctl enable agent-config.service
 
 # Create systemd socket and service for Shelley (socket activation).
@@ -351,7 +352,8 @@ RUN if [ -n "${PI_VERSION}" ]; then \
         npm install -g --ignore-scripts @earendil-works/pi-coding-agent; \
     fi && \
     test -x /home/exedev/.local/bin/pi && \
-    /home/exedev/.local/bin/pi --version
+    /home/exedev/.local/bin/pi --version && \
+    npm cache clean --force
 USER root
 RUN ln -sf /home/exedev/.local/bin/pi /usr/local/bin/pi
 
@@ -365,7 +367,8 @@ RUN pi install npm:pi-ponytail && \
     pi list | grep -q pi-ponytail && \
     pi list | grep -q cc-safety-net && \
     pi list | grep -q pi-web-access && \
-    pi list | grep -q pi-hermes-memory
+    pi list | grep -q pi-hermes-memory && \
+    npm cache clean --force
 
 # Point pi-hermes-memory's background reviews (correction saves, session
 # flushes, consolidation) at the exe.dev gateway's cheap DeepSeek Flash route

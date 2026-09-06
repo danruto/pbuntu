@@ -319,7 +319,10 @@ function main() {
 	console.log("// while guessing low only wastes budget.");
 	console.log("//");
 	console.log(`// ${rows.length} of ${incomplete.length} models resolved against ${host}.`);
-	console.log("const PROBED_LIMITS: ReadonlyMap<");
+	console.log("//");
+	console.log("// Exported for scripts/gen-cmd-providers.mjs, which bakes the same ceilings");
+	console.log("// into cmd's providers.json.");
+	console.log("export const PROBED_LIMITS: ReadonlyMap<");
 	console.log("\tstring,");
 	console.log("\t{ contextWindow?: number; maxTokens?: number }");
 	console.log("> = new Map([");

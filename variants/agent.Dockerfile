@@ -62,7 +62,8 @@ RUN curl -fsSL https://bun.sh/install | env BUN_INSTALL=/usr/local bash && \
 # default PATH): the control plane invokes bb-app over a plain non-interactive
 # SSH command, which never sources a profile that would add it back.
 RUN NPM_CONFIG_PREFIX=/usr/local npm i -g bb-app@0.40.0 && \
-    bb --version
+    bb --version && \
+    npm cache clean --force
 
 # Enable tailscaled and dockerd — base disables both. `tailscale up` needs the
 # daemon already running (D-018/D-026), and the default project test command an
