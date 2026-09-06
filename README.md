@@ -1,112 +1,50 @@
 # pbuntu
 
-> A personal fork of [exeuntu](https://github.com/boldsoftware/exeuntu) tuned for my workflow.
-> exeuntu is the default base image for [exe.dev](https://exe.dev/) — a kitted-out developer
-> image based on ubuntu 24.04 with systemd.
+VM images for the [exe.dev](https://exe.dev) fleet that [pbctrl](https://github.com/danruto/pbctrl)
+drives. Published to `ghcr.io/danruto/pbuntu` by GitHub Actions on every push to `main`.
 
-Available at `ghcr.io/danruto/pbuntu`.
+Two images, built thin on purpose: exe.dev meters pooled filesystem usage across the account, so
+every megabyte in an image is paid once per VM that boots it.
 
-## What's different from upstream exeuntu
+| Tag | Built from | Boots |
+|---|---|---|
+| `latest`, `<sha>` | `Dockerfile` | the control plane, the edge VM (paseo relay + web client), every runner |
+| `dev-<toolchains>-<sha>` | `variants/dev.Dockerfile` | one shared development machine per toolchain set |
 
-- Tweaked package selection and tooling for my personal dev setup.
-- Custom AGENTS.md and pi extension configuration.
-- Otherwise tracks upstream closely.
+## Base
 
-## Build & run
+Ubuntu with systemd as init, sshd, Docker + Compose, Tailscale, git, `gh`, `jq`, ripgrep and `just`.
+Nothing else: no editors, no language toolchains, no coding agents. It boots with `tailscaled`,
+`docker` and `ssh` enabled so the control plane's first SSH finds every daemon it needs.
+
+## Dev
+
+The base plus what a coding agent needs: node (as a harness dependency, not a toolchain), Claude
+Code, pi with its extensions, Command Code with the `cmd-acp` bridge, and the paseo daemon the
+control plane dispatches through. Language toolchains come from the `TOOLCHAINS` build arg, a
+comma-separated subset of `go,rust,bun`, and the tag names the set the way the control plane names
+the machine that boots it: `dev-rust-bun-<sha>` boots `dev-rust-bun`.
+
+`publish.yml` builds one image per entry in its `toolchains` matrix. A project that declares a
+combination no entry covers needs one added there.
+
+A dev machine is shared by every project that declares its toolchain set; each project's checkout
+is at `/home/exedev/<project>`. `pb-slim` on the machine lists what can still be dropped by hand
+(a playwright download, the npm cache).
+
+## Build locally
 
 ```sh
-make build     # build base image
-make run       # build + run with systemd
-make run-bash  # build + run, drop into bash
+make build                          # base
+make build-dev TOOLCHAINS=rust,bun  # one dev variant
+make size                           # what each came to
+make run-dev                        # boot it under docker with systemd
 ```
-
-Variants: `make build-golang`, `build-rust`, `build-web`, `build-editor`.
-
-## BB fleet enrollment
-
-All non-runtime variants include BB's host daemon. The `runner` and `runner-ssh`
-variants stay minimal and do not include it.
-
-To enroll a project VM automatically, provide `/exe.dev/bb.env` before first
-boot with the private server's generated machine-join values:
-
-```dotenv
-BB_SERVER=https://bb.example.com
-BB_JOIN_CODE=...
-BB_HOST_ID=...
-# Optional when using bb connect:
-BB_MACHINE_CODE=...
-# Optional:
-# BB_HOST_DAEMON_PORT=38887
-```
-
-The enabled `bb-enroll.service` consumes that file, joins the VM as a BB
-execution machine, installs the matching host daemon, and removes the join file.
-Credentials are runtime-provided and never baked into the image.
-
-For a private self-hosted control machine, keep BB on loopback and publish it
-through Tailscale Serve:
-
-```bash
-npx bb-app@latest
-tailscale serve --bg --https=443 http://127.0.0.1:38886
-```
-
-Use the resulting private tailnet HTTPS URL as `BB_SERVER`, then generate the
-machine join values from the control server's Settings → Machines. Do not use
-Tailscale Funnel or expose BB on a public interface.
-
-## OpenObserve metrics enrollment
-
-The image can ship host metrics (CPU, memory, disk, network) to an OpenObserve
-instance over OTLP/HTTP. It is opt-in and lazy: the image carries only a small
-enrollment script and a gated service — not the ~390MB OpenTelemetry Collector.
-`obs-enroll.service` is enabled but inert unless the provisioning layer writes
-`/exe.dev/obs.env` and `/exe.dev/obs.secret` at first boot, at which point it
-probes the endpoint, downloads the collector into the user prefix, and starts
-it. A VM never pointed at OpenObserve keeps no trace of one.
-
-Provide `/exe.dev/obs.env` and `/exe.dev/obs.secret`:
-
-```dotenv
-# /exe.dev/obs.env
-OBS_ENDPOINT=https://pb-obs.exe.xyz
-OBS_ORG=default
-OBS_USER=root@example.com
-# Optional:
-# OTEL_RESOURCE_ATTRIBUTES=project=noto,role=dev   # who this machine is
-# OBS_STREAM=hostmetrics            # default; per-host streams are fine too
-# OBS_TLS_INSECURE=true             # skip TLS verification (private CA)
-# OBS_COLLECTOR_VERSION=v0.159.0    # pin the collector release (default latest)
-```
-
-`/exe.dev/obs.secret` holds that user's OpenObserve password. Everything about
-the deployment — endpoint, org, user, stream, collector version — comes from
-the env file; the password is read from the secret file, combined with the user
-into the Basic auth header, and handed to the collector over the environment.
-Neither is baked into the image nor written to disk by the script.
-
-Enrollment is conditional on a successful probe: if the endpoint's `/healthz`
-does not answer, or the credentials are rejected, the script leaves the VM
-exactly as the image built it and exits cleanly (`systemctl status obs-enroll`
-shows why). The collector's default stream is the shared `hostmetrics`; set
-`OBS_STREAM` for a per-machine or per-deployment stream.
-
-Every sample carries the machine it was read on. The collector's
-`resourcedetection` processor supplies `host.name` from the system, and adds
-whatever `OTEL_RESOURCE_ATTRIBUTES` names on top — the standard
-`key=value,key=value` form, which is how a deployment labels a machine with its
-own vocabulary (`project`, `role`) without this image knowing either word. A
-fleet sharing one stream stays separable by those attributes, so per-machine
-streams remain a choice rather than the only way to tell two VMs apart.
 
 ## Agent configuration sync
 
-The image ships the mechanism for pulling an operator's own agent configuration
-onto a VM and none of the configuration itself. These images are shared; the
-repositories they sync usually are not, so nothing operator-specific is baked in.
-
-Provide `/exe.dev/agent-config.env` listing the repositories:
+The dev image ships the mechanism for pulling an operator's own agent configuration onto a VM and
+none of the configuration itself. Provide `/exe.dev/agent-config.env` listing the repositories:
 
 ```dotenv
 AGENT_CONFIG_REPOS=you/one-repo you/another
@@ -116,29 +54,22 @@ AGENT_CONFIG_INSTRUCTIONS=path/within/the/repo/CLAUDE.md
 AGENT_GIT_HOST=https://github.int.exe.xyz
 ```
 
-There are no roles in that list — the unit does not know what any repository is
-"for". It clones each one in order and inspects it for things a harness
+`agent-config.service` clones each repository in order and inspects it for things a harness
 understands:
 
-- `.claude-plugin/marketplace.json` → registers the checkout as a local Claude
-  Code marketplace and installs every plugin the manifest lists, by the names
-  the manifest gives;
-- `plugins/*/instructions` and its sibling `standards/` → copied into
-  `~/.pi/agent/skills/<repo>/` for pi;
-- `AGENT_CONFIG_INSTRUCTIONS`, if that path exists in the repo → merged ahead of
-  this image's own `AGENTS.md` into the single file `~/.claude/CLAUDE.md`,
-  `~/.codex/AGENTS.md` and `~/.pi/AGENTS.md` all point at. First repository in
-  the list carrying it wins.
+- `.claude-plugin/marketplace.json` → registers the checkout as a local Claude Code marketplace and
+  installs every plugin the manifest lists;
+- `plugins/*/instructions` and its sibling `standards/` → copied into `~/.pi/agent/skills/<repo>/`;
+- `AGENT_CONFIG_INSTRUCTIONS`, if that path exists in the repo → merged ahead of this image's own
+  `AGENTS.md` into the single file `~/.claude/CLAUDE.md` and `~/.pi/AGENTS.md` both point at.
 
-A repository offering none of these is cloned and nothing more.
-
-The env file is kept rather than consumed: it names repositories and carries no
-credential, so every boot re-syncs from it. The credential is whatever gives the
-VM read access to those repositories — on exe.dev, a readonly GitHub integration
-attached to the VM. Without one the unit fails and the VM is left exactly as the
-image built it; `systemctl status agent-config` says which step failed.
+The env file is kept rather than consumed, so every boot re-syncs from it. The credential is
+whatever gives the VM read access to those repositories — on exe.dev, a readonly GitHub
+integration attached to the VM.
 
 ## Upstream
 
-This is a fork of [boldsoftware/exeuntu](https://github.com/boldsoftware/exeuntu).
-See upstream for the original README, contributing guide, and full changelog.
+A fork of [boldsoftware/exeuntu](https://github.com/boldsoftware/exeuntu), exe.dev's default image.
+The exe.dev boot contract it keeps: the `exe.dev/login-user` label, an `exedev` user with UID 1000
+and passwordless sudo, systemd reached through `/usr/local/bin/init`, and `/exe.dev/setup` run once
+on first boot.

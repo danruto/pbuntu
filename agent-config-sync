@@ -54,7 +54,7 @@ sync_repo() {
 
 # merge_instructions makes the operator's global instructions the ones every
 # harness reads, with the image's own appended. Concatenated rather than
-# @-imported: only Claude Code resolves imports, and codex and pi read the same
+# @-imported: only Claude Code resolves imports, and pi reads the same
 # file.
 merge_instructions() {
     local operator=$1
@@ -69,7 +69,7 @@ merge_instructions() {
     } >"$MERGED_INSTRUCTIONS" || return 1
 
     local link
-    for link in "$HOME/.claude/CLAUDE.md" "$HOME/.codex/AGENTS.md" "$HOME/.pi/AGENTS.md"; do
+    for link in "$HOME/.claude/CLAUDE.md" "$HOME/.pi/AGENTS.md"; do
         mkdir -p "$(dirname "$link")" && ln -sfn "$MERGED_INSTRUCTIONS" "$link" || return 1
     done
 }
