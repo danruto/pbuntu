@@ -1,6 +1,6 @@
 {
   "name": "cmd-acp",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Minimal ACP (Agent Client Protocol) wrapper around the command-code CLI",
   "type": "module",
   "bin": {

@@ -9,7 +9,7 @@
 #
 # Build:  make build-dev TOOLCHAINS=rust,bun
 #
-FROM docker.io/library/golang:1.26.7 AS exeuntu-cli
+FROM docker.io/library/golang:1.27.1 AS exeuntu-cli
 ARG EXEUNTU_GIT_VERSION=unknown
 WORKDIR /src/exeuntu-cli
 COPY cli/ ./
@@ -119,7 +119,7 @@ RUN if [ -n "${PI_VERSION}" ]; then \
     pi install npm:pi-web-access && \
     pi install npm:pi-hermes-memory && \
     pi list | grep -q pi-hermes-memory && \
-    npm cache clean --force
+    rm -rf /home/exedev/.npm/_cacache
 USER root
 RUN ln -sf /home/exedev/.local/bin/pi /usr/local/bin/pi
 
@@ -164,18 +164,22 @@ RUN ARCH=$(uname -m) && \
     chown -R exedev:exedev /home/exedev/.pi
 
 # Paseo pins the daemon + CLI the paseo-bootstrap unit drives by bare name
-# under systemd's default PATH, so the CLI goes to a system prefix. The
-# package's own copy of the web client is dropped: the edge VM serves it.
-RUN npm install -g --prefix=/usr/local @getpaseo/cli@0.6.1 && \
+# under systemd's default PATH, so the CLI goes to a system prefix. Keep this
+# pin in step with the control plane's FACTORY_PASEO_VERSION: the daemons and
+# the web client speak a protocol paseo documents as unstable.
+#
+# The cache is removed rather than `npm cache clean --force`, which fails the
+# build with ENOTEMPTY rmdir'ing its own _cacache under overlayfs.
+RUN npm install -g --prefix=/usr/local @getpaseo/cli@0.7.2 && \
     /usr/local/bin/paseo --version && \
-    npm cache clean --force
+    rm -rf /root/.npm/_cacache
 
 # Command Code, pinned. Installed into the user prefix so its self-updater
 # works without sudo; the symlinks keep it on the default PATH for systemd.
 USER exedev
-RUN npm install -g command-code@1.38.2 && \
+RUN npm install -g command-code@1.50.0 && \
     /home/exedev/.local/bin/command-code --version && \
-    npm cache clean --force
+    rm -rf /home/exedev/.npm/_cacache
 
 # BYOK provider config: the exe.dev LLM gateway, keyless inside exe.dev VMs.
 # The default model must carry the provider prefix, or cmd resolves it against
@@ -195,7 +199,7 @@ RUN ln -sf /home/exedev/.local/bin/command-code /usr/local/bin/command-code && \
 # directory is copied because the bridge imports routing.mjs. The version pin
 # fails the build when the checkout's package.json has moved, rather than
 # silently baking a different bridge.
-ARG CMD_ACP_VERSION=0.2.0
+ARG CMD_ACP_VERSION=0.2.1
 COPY cmd-acp/ /opt/cmd-acp/
 RUN cd /opt/cmd-acp && \
     node -e 'const v=require("/opt/cmd-acp/package.json").version; \
@@ -203,7 +207,7 @@ RUN cd /opt/cmd-acp && \
     npm install --omit=dev --no-audit --no-fund && \
     ln -sf /opt/cmd-acp/index.mjs /usr/local/bin/cmd-acp && \
     chmod +x /usr/local/bin/cmd-acp && \
-    npm cache clean --force
+    rm -rf /root/.npm/_cacache
 
 # Register command-code as a paseo ACP provider. The gateway key is repeated
 # here because the daemon is a systemd unit that never sources ~/.bashrc.

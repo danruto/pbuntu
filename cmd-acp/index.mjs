@@ -491,7 +491,7 @@ Usage:
 Environment:
   CMD_ACP_CMD            command-code binary (default: cmd)
   CMD_ACP_FLAGS          extra flags for every cmd -p run
-                         (default: --yolo --trust --skip-onboarding)
+                         (default: --yolo --trust --skip-onboarding --max-turns 1000)
   CMD_ACP_MODELS         comma-separated model ids to advertise instead of
                          parsing \`cmd --list-models\`; the first is the default
 `;
