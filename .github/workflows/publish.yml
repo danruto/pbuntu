@@ -7,6 +7,7 @@ on:
   schedule:
     # Weekly rebuild to pick up security updates in the ubuntu base layer
     - cron: "0 2 * * 1"
+  workflow_dispatch:
 
 permissions:
   packages: write
@@ -34,15 +35,17 @@ jobs:
           cache-to: type=gha,mode=max
 
   # One dev image per toolchain set. The tag is what the control plane pins
-  # per environment: dev-<toolchains>-<sha>. Add a set here when a project
-  # declares a combination no entry covers.
+  # per environment: dev-<toolchains>-<sha>. Every subset the control plane can
+  # declare is built, because a project declaring one it cannot pin is refused
+  # outright — "base" being the set with nothing in it, which is what a project
+  # naming no toolchain gets.
   dev:
     needs: base
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        toolchains: [go, rust, bun, rust-bun, go-bun]
+        toolchains: [base, go, rust, bun, go-rust, go-bun, rust-bun, go-rust-bun]
     steps:
       - uses: actions/checkout@v7
       - uses: docker/setup-buildx-action@v4
@@ -51,8 +54,16 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
+      # "base" names the empty set, not a toolchain: it builds the dev image
+      # with the harness and no compilers, so it resolves to an empty arg.
       - id: set
-        run: echo "arg=$(echo '${{ matrix.toolchains }}' | tr '-' ',')" >> "$GITHUB_OUTPUT"
+        env:
+          TOOLCHAINS: ${{ matrix.toolchains }}
+        run: |
+          if [ "$TOOLCHAINS" = base ]; then
+            TOOLCHAINS=""
+          fi
+          echo "arg=$(echo "$TOOLCHAINS" | tr '-' ',')" >> "$GITHUB_OUTPUT"
       - uses: docker/build-push-action@v7
         with:
           context: .
@@ -68,7 +79,6 @@ jobs:
 
   cleanup:
     needs: dev
-    if: github.event_name == 'schedule'
     runs-on: ubuntu-latest
     steps:
       - uses: dataaxiom/ghcr-cleanup-action@v1
