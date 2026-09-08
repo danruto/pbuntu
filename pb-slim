@@ -5,8 +5,8 @@
 #   pb-slim               list groups and what each holds
 #   pb-slim playwright    remove those groups
 #
-# Only self-contained installs are listed. Anything wired into systemd or a
-# paseo provider (pi, command-code, paseo) stays.
+# Only self-contained installs are listed. Anything wired into systemd or into a
+# coding agent (pi, command-code, herdr) stays.
 set -eu
 
 paths() {

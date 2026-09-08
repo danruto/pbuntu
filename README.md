@@ -8,7 +8,7 @@ every megabyte in an image is paid once per VM that boots it.
 
 | Tag | Built from | Boots |
 |---|---|---|
-| `latest`, `<sha>` | `Dockerfile` | the control plane, the edge VM (paseo relay + web client), every runner |
+| `latest`, `<sha>` | `Dockerfile` | the control plane, the hub VM (herdr client), every runner |
 | `dev-<toolchains>-<sha>` | `variants/dev.Dockerfile` | one shared development machine per toolchain set |
 
 ## Base
@@ -20,7 +20,7 @@ Nothing else: no editors, no language toolchains, no coding agents. It boots wit
 ## Dev
 
 The base plus what a coding agent needs: node (as a harness dependency, not a toolchain), Claude
-Code, pi with its extensions, Command Code with the `cmd-acp` bridge, and the paseo daemon the
+Code, pi with its extensions, Command Code with the `cmd-acp` bridge, and the herdr server the
 control plane dispatches through. Language toolchains come from the `TOOLCHAINS` build arg, a
 comma-separated subset of `go,rust,bun`, and the tag names the set the way the control plane names
 the machine that boots it: `dev-rust-bun-<sha>` boots `dev-rust-bun`.

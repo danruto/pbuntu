@@ -5,7 +5,7 @@
 #
 # Everything a coding agent needs rides on top of the base: node for the
 # harnesses that are npm packages, Claude Code, pi, Command Code with its ACP
-# bridge, and the paseo daemon the control plane dispatches through.
+# bridge, and the herdr server the control plane dispatches through.
 #
 # Build:  make build-dev TOOLCHAINS=rust,bun
 #
@@ -33,8 +33,8 @@ RUN apt-get update && \
 
 COPY --from=exeuntu-cli /out/exeuntu /usr/local/bin/exeuntu
 
-# Node is a harness dependency, not a project toolchain: paseo, pi and
-# command-code are npm packages. Node 24 tracks what paseo supports.
+# Node is a harness dependency, not a project toolchain: pi and command-code
+# are npm packages. herdr is a static binary and needs none of it.
 # Keep npm's global prefix user-writable: pi's self-updater runs as exedev.
 RUN ARCH="$(uname -m)" && \
     case "${ARCH}" in x86_64) NODE_ARCH=x64 ;; aarch64|arm64) NODE_ARCH=arm64 ;; *) echo "Unsupported architecture: ${ARCH}" && exit 1 ;; esac && \
@@ -163,16 +163,31 @@ RUN ARCH=$(uname -m) && \
     ln -sf /home/exedev/.pi/agent/bin/fd /usr/local/bin/fd && \
     chown -R exedev:exedev /home/exedev/.pi
 
-# Paseo pins the daemon + CLI the paseo-bootstrap unit drives by bare name
-# under systemd's default PATH, so the CLI goes to a system prefix. Keep this
-# pin in step with the control plane's FACTORY_PASEO_VERSION: the daemons and
-# the web client speak a protocol paseo documents as unstable.
+# herdr — the terminal-session server the control plane opens a workspace in
+# and starts an agent inside. It is one static binary. The installer drops it in
+# ~/.local/bin, so it is moved to a system prefix: the control plane drives it
+# over a non-interactive ssh whose PATH is systemd's.
 #
-# The cache is removed rather than `npm cache clean --force`, which fails the
-# build with ENOTEMPTY rmdir'ing its own _cacache under overlayfs.
-RUN npm install -g --prefix=/usr/local @getpaseo/cli@0.7.2 && \
-    /usr/local/bin/paseo --version && \
-    rm -rf /root/.npm/_cacache
+# `machine add` from a client is the one path that must not meet a server this
+# image pre-started — it refuses a remote that already has one — so nothing here
+# starts it. The control plane's first call does.
+#
+# The version check fails the build on a drifted installer rather than baking a
+# herdr the control plane has not been read against.
+ARG HERDR_VERSION=0.9.0
+RUN curl -fsSL https://herdr.dev/install.sh | sh && \
+    mv "$HOME/.local/bin/herdr" /usr/local/bin/herdr && \
+    chmod 0755 /usr/local/bin/herdr && \
+    /usr/local/bin/herdr --version | grep -qF "${HERDR_VERSION}"
+
+# Detection manifests are fetched from herdr.dev at runtime and applied without
+# a restart, so an unpinned fleet can change how it classifies an agent between
+# one dispatch and the next. The control plane branches on those states, so the
+# rules are frozen to what ships in the binary.
+RUN mkdir -p /home/exedev/.config/herdr && \
+    printf '%s\n' '[update]' 'manifest_check = false' \
+        > /home/exedev/.config/herdr/config.toml && \
+    chown -R exedev:exedev /home/exedev/.config/herdr
 
 # Command Code, pinned. Installed into the user prefix so its self-updater
 # works without sudo; the symlinks keep it on the default PATH for systemd.
@@ -195,7 +210,7 @@ USER root
 RUN ln -sf /home/exedev/.local/bin/command-code /usr/local/bin/command-code && \
     ln -sf /home/exedev/.local/bin/command-code /usr/local/bin/cmd
 
-# cmd-acp — the ACP bridge paseo drives command-code through. The whole
+# cmd-acp — the ACP bridge command-code is driven through. The whole
 # directory is copied because the bridge imports routing.mjs. The version pin
 # fails the build when the checkout's package.json has moved, rather than
 # silently baking a different bridge.
@@ -209,24 +224,44 @@ RUN cd /opt/cmd-acp && \
     chmod +x /usr/local/bin/cmd-acp && \
     rm -rf /root/.npm/_cacache
 
-# Register command-code as a paseo ACP provider. The gateway key is repeated
-# here because the daemon is a systemd unit that never sources ~/.bashrc.
+# Interactive Claude runs its first-run wizard — theme picker, then a login
+# selector — on a machine where onboarding has never been marked complete, and
+# it does so whether or not CLAUDE_CODE_OAUTH_TOKEN authenticates it. herdr
+# reports those screens as `idle` because no detection rule matches them, so an
+# unattended dispatch parks there looking finished. This file is what skips
+# them. It carries no credential; the token lives in settings.json.
+#
+# Mode 600 matches what Claude writes itself: the same file later accumulates
+# per-project state.
 USER exedev
-RUN mkdir -p /home/exedev/.paseo && \
+RUN printf '%s\n' \
+      '{' \
+      '  "hasCompletedOnboarding": true,' \
+      '  "firstStartTime": "2026-01-01T00:00:00.000Z"' \
+      '}' > /home/exedev/.claude.json && \
+    chmod 600 /home/exedev/.claude.json
+
+# A permission policy, so unattended dispatch does not stall on a tool-approval
+# prompt. herdr detects that prompt correctly and refuses to type into it, which
+# is the right behaviour and still a stalled attempt — the approval has to be
+# unnecessary rather than answered. The VM is the sandbox.
+#
+# This is a fragment: the control plane merges the machine's Claude token into
+# the same file with jq's recursive `*`, so both survive.
+RUN mkdir -p /home/exedev/.claude && \
     printf '%s\n' \
       '{' \
-      '  "agents": {' \
-      '    "providers": {' \
-      '      "command-code": {' \
-      '        "extends": "acp",' \
-      '        "label": "Command Code",' \
-      '        "command": ["/usr/local/bin/cmd-acp"],' \
-      '        "env": { "COMMAND_CODE_API_KEY": "exe-gateway" }' \
-      '      }' \
-      '    }' \
+      '  "permissions": {' \
+      '    "defaultMode": "bypassPermissions"' \
       '  }' \
-      '}' > /home/exedev/.paseo/config.json && \
-    chmod 644 /home/exedev/.paseo/config.json
+      '}' > /home/exedev/.claude/settings.json && \
+    chmod 600 /home/exedev/.claude/settings.json
+
+# pi's herdr integration grants full_lifecycle_hook_authority, so herdr stops
+# reading the screen for pi entirely and trusts the hook. Claude's registers a
+# SessionStart hook only and grants no such authority, so it is left off: it
+# would add a hook without moving herdr off the screen manifest.
+RUN /usr/local/bin/herdr integration install pi
 USER root
 
 # The operator's agent configuration, synced from repositories named at
