@@ -121,6 +121,10 @@
           "contextWindow": 1000000,
           "maxOutput": 393216
         },
+        "deepseek/deepseek-v4.1-flash": {
+          "name": "DeepSeek V4.1 Flash",
+          "contextWindow": 1000000
+        },
         "google/gemini-3.1-flash-lite": {
           "name": "Gemini 3.1 Flash Lite",
           "contextWindow": 1000000
@@ -179,6 +183,10 @@
           "name": "GPT-5.6 Terra",
           "contextWindow": 1050000,
           "maxOutput": 128000
+        },
+        "inclusionai/ling-3.0-flash-sante:free": {
+          "name": "Ling 3.0 Flash Sante",
+          "contextWindow": 262144
         },
         "meituan/LongCat-2.0:free": {
           "name": "LongCat 2.0",
