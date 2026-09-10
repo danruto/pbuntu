@@ -22,7 +22,7 @@ Nothing else: no editors, no language toolchains, no coding agents. It boots wit
 The base plus what a coding agent needs: node (as a harness dependency, not a toolchain), Claude
 Code, pi with its extensions, Command Code with the `cmd-acp` bridge, and the herdr server the
 control plane dispatches through. Language toolchains come from the `TOOLCHAINS` build arg, a
-comma-separated subset of `go,rust,bun`, and the tag names the set the way the control plane names
+comma-separated subset of `go,rust,bun,python`, and the tag names the set the way the control plane names
 the machine that boots it: `dev-rust-bun-<sha>` boots `dev-rust-bun`.
 
 `publish.yml` builds one image per entry in its `toolchains` matrix. A project that declares a

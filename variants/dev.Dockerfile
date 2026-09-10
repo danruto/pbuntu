@@ -1,6 +1,6 @@
 # Dev variant — a shared development machine for every project that needs the
 # same toolchains. One image is built per toolchain set (TOOLCHAINS, a
-# comma-separated subset of go,rust,bun), so a machine carries exactly the
+# comma-separated subset of go,rust,bun,python), so a machine carries exactly the
 # compilers its projects use and nothing it would only ever delete.
 #
 # Everything a coding agent needs rides on top of the base: node for the
@@ -84,6 +84,25 @@ RUN if [[ ",${TOOLCHAINS}," == *,rust,* ]]; then \
         rm -rf /home/exedev/.rustup/toolchains/*/share/doc; \
     fi
 USER root
+
+# Python — uv, plus a uv-managed CPython on the system PATH so non-interactive
+# ssh finds python3. Projects pin their own interpreter and packages through uv.
+# The machine has no GPU: training runs on RunPod pods driven by runpodctl,
+# whose API key is set on the machine after boot (`runpodctl doctor`), never
+# baked. The version check fails the build on a moved release.
+ARG RUNPODCTL_VERSION=2.14.0
+RUN if [[ ",${TOOLCHAINS}," == *,python,* ]]; then \
+        curl -LsSf https://astral.sh/uv/install.sh | \
+            env UV_INSTALL_DIR=/usr/local/bin UV_NO_MODIFY_PATH=1 sh && \
+        UV_PYTHON_INSTALL_DIR=/opt/uv-python UV_PYTHON_BIN_DIR=/usr/local/bin \
+            uv python install --default && \
+        chmod -R a+rX /opt/uv-python && \
+        python3 --version && \
+        curl -fsSL -o /usr/local/bin/runpodctl \
+            "https://github.com/runpod/runpodctl/releases/download/v${RUNPODCTL_VERSION}/runpodctl-linux-$(dpkg --print-architecture)" && \
+        chmod 0755 /usr/local/bin/runpodctl && \
+        runpodctl version | grep -qF "${RUNPODCTL_VERSION}"; \
+    fi
 
 # ── coding agents ─────────────────────────────────────────────────────────
 RUN mkdir -p /home/exedev/.claude /home/exedev/.pi /home/exedev/.config && \
