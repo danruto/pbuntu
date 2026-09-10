@@ -105,8 +105,11 @@ RUN if [[ ",${TOOLCHAINS}," == *,python,* ]]; then \
     fi
 
 # ── coding agents ─────────────────────────────────────────────────────────
-RUN mkdir -p /home/exedev/.claude /home/exedev/.pi /home/exedev/.config && \
-    chown -R exedev:exedev /home/exedev/.claude /home/exedev/.pi /home/exedev/.config
+# ~/.npm is made here because the npm steps below mount their cache onto it,
+# and a mount point BuildKit creates itself is owned by root — which would leave
+# pi's self-updater unable to write its cache on the running machine.
+RUN mkdir -p /home/exedev/.claude /home/exedev/.pi /home/exedev/.config /home/exedev/.npm && \
+    chown -R exedev:exedev /home/exedev/.claude /home/exedev/.pi /home/exedev/.config /home/exedev/.npm
 
 # The image's own agent instructions live outside $HOME: agent-config-sync
 # merges the operator's ahead of them into ~/.config/agents/AGENTS.md and
@@ -123,9 +126,15 @@ RUN exeuntu update claude && \
 
 # pi lands in the user-writable prefix: `pi update --self` writes where it is
 # installed.
+#
+# Every npm step keeps its cache on a BuildKit cache mount, so the cache never
+# reaches a layer and nothing has to delete it. Deleting it inside the step
+# raced whatever npm or a freshly run CLI was still writing there, and failed
+# the build with ENOTEMPTY.
 ARG PI_VERSION=
 USER exedev
-RUN if [ -n "${PI_VERSION}" ]; then \
+RUN --mount=type=cache,target=/home/exedev/.npm,uid=1000,gid=1000 \
+    if [ -n "${PI_VERSION}" ]; then \
         npm install -g --ignore-scripts "@earendil-works/pi-coding-agent@${PI_VERSION}"; \
     else \
         npm install -g --ignore-scripts @earendil-works/pi-coding-agent; \
@@ -137,8 +146,7 @@ RUN if [ -n "${PI_VERSION}" ]; then \
     pi install npm:cc-safety-net && \
     pi install npm:pi-web-access && \
     pi install npm:pi-hermes-memory && \
-    pi list | grep -q pi-hermes-memory && \
-    rm -rf /home/exedev/.npm/_cacache
+    pi list | grep -q pi-hermes-memory
 USER root
 RUN ln -sf /home/exedev/.local/bin/pi /usr/local/bin/pi
 
@@ -211,9 +219,9 @@ RUN mkdir -p /home/exedev/.config/herdr && \
 # Command Code, pinned. Installed into the user prefix so its self-updater
 # works without sudo; the symlinks keep it on the default PATH for systemd.
 USER exedev
-RUN npm install -g command-code@1.50.0 && \
-    /home/exedev/.local/bin/command-code --version && \
-    rm -rf /home/exedev/.npm/_cacache
+RUN --mount=type=cache,target=/home/exedev/.npm,uid=1000,gid=1000 \
+    npm install -g command-code@1.50.0 && \
+    /home/exedev/.local/bin/command-code --version
 
 # BYOK provider config: the exe.dev LLM gateway, keyless inside exe.dev VMs.
 # The default model must carry the provider prefix, or cmd resolves it against
@@ -235,13 +243,13 @@ RUN ln -sf /home/exedev/.local/bin/command-code /usr/local/bin/command-code && \
 # silently baking a different bridge.
 ARG CMD_ACP_VERSION=0.2.1
 COPY cmd-acp/ /opt/cmd-acp/
-RUN cd /opt/cmd-acp && \
+RUN --mount=type=cache,target=/root/.npm \
+    cd /opt/cmd-acp && \
     node -e 'const v=require("/opt/cmd-acp/package.json").version; \
       if (v !== process.argv[1]) { console.error(`cmd-acp version ${v} does not match pin ${process.argv[1]}`); process.exit(1) }' "$CMD_ACP_VERSION" && \
     npm install --omit=dev --no-audit --no-fund && \
     ln -sf /opt/cmd-acp/index.mjs /usr/local/bin/cmd-acp && \
-    chmod +x /usr/local/bin/cmd-acp && \
-    rm -rf /root/.npm/_cacache
+    chmod +x /usr/local/bin/cmd-acp
 
 # Interactive Claude runs its first-run wizard — theme picker, then a login
 # selector — on a machine where onboarding has never been marked complete, and
