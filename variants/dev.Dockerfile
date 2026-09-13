@@ -216,11 +216,29 @@ RUN mkdir -p /home/exedev/.config/herdr && \
         > /home/exedev/.config/herdr/config.toml && \
     chown -R exedev:exedev /home/exedev/.config/herdr
 
+# amp — the Amp CLI. It is on every dev image rather than behind TOOLCHAINS:
+# amp is a supplemental toolchain, so a project declaring it lands on whichever
+# image its other toolchains pick, and the control plane starts one `amp
+# --no-tui` runner per such project. Nothing here starts it.
+#
+# The installer verifies the binary's checksum and honours AMP_VERSION; the
+# version check fails the build on a pin the installer did not deliver. amp
+# updates itself in the background by default, so the settings file turns that
+# off and the fleet runs the version baked here.
+ARG AMP_VERSION=0.0.1789329654-g2cdf19
+RUN curl -fsSL https://ampcode.com/install.sh | \
+        env AMP_HOME=/opt/amp AMP_VERSION="${AMP_VERSION}" bash && \
+    ln -sf /opt/amp/bin/amp /usr/local/bin/amp && \
+    AMP_SKIP_UPDATE_CHECK=1 /usr/local/bin/amp version | grep -qF "${AMP_VERSION}" && \
+    mkdir -p /home/exedev/.config/amp && \
+    printf '%s\n' '{"amp.updates.mode": "disabled"}' > /home/exedev/.config/amp/settings.json && \
+    chown -R exedev:exedev /home/exedev/.config/amp
+
 # Command Code, pinned. Installed into the user prefix so its self-updater
 # works without sudo; the symlinks keep it on the default PATH for systemd.
 USER exedev
 RUN --mount=type=cache,target=/home/exedev/.npm,uid=1000,gid=1000 \
-    npm install -g command-code@1.50.0 && \
+    npm install -g command-code@1.53.1 && \
     /home/exedev/.local/bin/command-code --version
 
 # BYOK provider config: the exe.dev LLM gateway, keyless inside exe.dev VMs.

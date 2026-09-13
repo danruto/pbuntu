@@ -20,8 +20,9 @@ Nothing else: no editors, no language toolchains, no coding agents. It boots wit
 ## Dev
 
 The base plus what a coding agent needs: node (as a harness dependency, not a toolchain), Claude
-Code, pi with its extensions, Command Code with the `cmd-acp` bridge, and the herdr server the
-control plane dispatches through. Language toolchains come from the `TOOLCHAINS` build arg, a
+Code, pi with its extensions, Command Code with the `cmd-acp` bridge, the herdr server the
+control plane dispatches through, and the Amp CLI (pinned, self-update off), which the control
+plane runs as an Amp runner on a machine whose projects declare the supplemental `amp` toolchain. Language toolchains come from the `TOOLCHAINS` build arg, a
 comma-separated subset of `go,rust,bun,python`, and the tag names the set the way the control plane names
 the machine that boots it: `dev-rust-bun-<sha>` boots `dev-rust-bun`.
 
