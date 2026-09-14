@@ -1,8 +1,8 @@
 # pbuntu — the one base every exe.dev VM in the fleet boots from.
 #
 # Deliberately thin: systemd as init, sshd, Docker, Tailscale, git and the
-# handful of CLIs the control plane drives over SSH. No editors, no language
-# toolchains, no coding agents — the dev variant layers those, and every other
+# handful of CLIs the control plane drives over SSH, plus one tiny editor. No
+# language toolchains, no coding agents — the dev variant layers those, and every other
 # role (control plane, edge, runner) runs this image as is. The exe.dev disk
 # quota is pooled filesystem usage across the account, so every megabyte here
 # is paid once per VM.
@@ -50,6 +50,19 @@ RUN curl -fsSL https://pkgs.tailscale.com/stable/ubuntu/noble.noarmor.gpg -o /us
 RUN JUST_VERSION=$(curl -fsSL https://api.github.com/repos/casey/just/releases/latest | jq -r '.tag_name') && \
     curl -fsSL "https://github.com/casey/just/releases/download/${JUST_VERSION}/just-${JUST_VERSION}-$(uname -m)-unknown-linux-musl.tar.gz" | tar -xzC /usr/local/bin just && \
     chmod +x /usr/local/bin/just
+
+# hake (hako-edit) — a ~300 KB modal editor for fixing configs on the box. The
+# release checksum covers the extracted binary; the version check fails the
+# build on a drifted pin.
+ARG HAKE_VERSION=0.1.6
+RUN case "$(uname -m)" in x86_64) HAKE_ARCH=x86_64 ;; aarch64|arm64) HAKE_ARCH=arm64 ;; *) echo "Unsupported architecture: $(uname -m)" && exit 1 ;; esac && \
+    HAKE_URL="https://github.com/mithraeums/hako-edit/releases/download/v${HAKE_VERSION}/hake-linux-${HAKE_ARCH}" && \
+    TMPDIR=$(mktemp -d) && \
+    curl -fsSL "${HAKE_URL}.tar.gz" | tar -xzC "${TMPDIR}" --strip-components=1 && \
+    curl -fsSL "${HAKE_URL}.sha256" | (cd "${TMPDIR}" && sha256sum -c -) && \
+    install -m 0755 "${TMPDIR}/hake" /usr/local/bin/hake && \
+    rm -rf "${TMPDIR}" && \
+    hake --version | grep -qF "${HAKE_VERSION}"
 
 # systemd inside an exe.dev VM: mask what has no hardware or console to talk
 # to, and enable the daemons every role needs up before the control plane's

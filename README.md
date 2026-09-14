@@ -13,8 +13,9 @@ every megabyte in an image is paid once per VM that boots it.
 
 ## Base
 
-Ubuntu with systemd as init, sshd, Docker + Compose, Tailscale, git, `gh`, `jq`, ripgrep and `just`.
-Nothing else: no editors, no language toolchains, no coding agents. It boots with `tailscaled`,
+Ubuntu with systemd as init, sshd, Docker + Compose, Tailscale, git, `gh`, `jq`, ripgrep, `just`
+and the `hake` editor ([hako-edit](https://github.com/mithraeums/hako-edit), pinned) for editing configs.
+Nothing else: no language toolchains, no coding agents. It boots with `tailscaled`,
 `docker` and `ssh` enabled so the control plane's first SSH finds every daemon it needs.
 
 ## Dev
