@@ -237,6 +237,21 @@ export default async function (pi: ExtensionAPI) {
     unregisterIntegrations();
   });
 
+  // OpenCode rejects a request without x-opencode-session (400
+  // MissingSessionID). pi sends that header only when the provider id is
+  // literally "opencode" / "opencode-go" or the host is opencode.ai, so the
+  // same models reached through an exe.dev integration (provider
+  // "exe-dev-opencode-go", host llm.int.exe.xyz) never get it.
+  pi.on("before_provider_headers", (event, ctx) => {
+    const model = ctx.model;
+    if (!model || !model.provider.startsWith("exe-dev-opencode")) return;
+    const info = integrationInfos.get(model.provider);
+    if (!info || !isIntegrationBaseUrl(model.baseUrl, info)) return;
+    if (event.headers["x-opencode-session"]) return;
+    event.headers["x-opencode-session"] = ctx.sessionManager.getSessionId();
+    event.headers["x-opencode-client"] = "pi";
+  });
+
   pi.on("before_provider_request", (event, ctx) => {
     const model = ctx.model;
     if (!model) return undefined;

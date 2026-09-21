@@ -201,7 +201,7 @@ RUN ARCH=$(uname -m) && \
 #
 # The version check fails the build on a drifted installer rather than baking a
 # herdr the control plane has not been read against.
-ARG HERDR_VERSION=0.9.0
+ARG HERDR_VERSION=0.9.1
 RUN curl -fsSL https://herdr.dev/install.sh | sh && \
     mv "$HOME/.local/bin/herdr" /usr/local/bin/herdr && \
     chmod 0755 /usr/local/bin/herdr && \
@@ -225,7 +225,7 @@ RUN mkdir -p /home/exedev/.config/herdr && \
 # version check fails the build on a pin the installer did not deliver. amp
 # updates itself in the background by default, so the settings file turns that
 # off and the fleet runs the version baked here.
-ARG AMP_VERSION=0.0.1789416054-g834320
+ARG AMP_VERSION=0.0.1789790452-gad4023
 RUN curl -fsSL https://ampcode.com/install.sh | \
         env AMP_HOME=/opt/amp AMP_VERSION="${AMP_VERSION}" bash && \
     ln -sf /opt/amp/bin/amp /usr/local/bin/amp && \
@@ -238,7 +238,7 @@ RUN curl -fsSL https://ampcode.com/install.sh | \
 # works without sudo; the symlinks keep it on the default PATH for systemd.
 USER exedev
 RUN --mount=type=cache,target=/home/exedev/.npm,uid=1000,gid=1000 \
-    npm install -g command-code@1.54.0 && \
+    npm install -g command-code@1.58.1 && \
     /home/exedev/.local/bin/command-code --version
 
 # BYOK provider config: the exe.dev LLM gateway, keyless inside exe.dev VMs.

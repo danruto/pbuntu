@@ -50,6 +50,17 @@ const MANUAL_MAX_TOKENS = new Map([
 	// provider and the same 500000 window, so grok-4.6 cannot refuse it. It is a
 	// floor that beats the 4096 default, not a measured ceiling.
 	["grok-4.6", 30000],
+	// These three answer every probe with a routing or upstream failure rather
+	// than a ceiling — commandai reports "No available providers match the
+	// 'only' filter" for MiniMax-M2.7, "temporarily unavailable" for laguna,
+	// and a bare "Param Incorrect" for mimo — so a rerun would otherwise walk
+	// them back down to the 4096 default. Each value is a ceiling an earlier
+	// probe named and the same route then honoured. Delete an entry once its
+	// route answers a probe again.
+	["minimax-m2.7", 196608],
+	["laguna-s-2.1", 32768],
+	["mimo-v2.5", 131072],
+	["mimo-v2.5-pro", 131072],
 ]);
 
 // Every distinct phrasing the upstreams behind commandai and opencode-go use to
@@ -104,11 +115,18 @@ function probeAt(asks) {
 	const lines = asks.map(([id, maxTokens]) => `${id} ${maxTokens}`).join("\n");
 	return ssh(`
 set -u
+# opencode rejects a request without x-opencode-session (400 MissingSessionID)
+# before it ever looks at max_tokens, so without this every opencode-go model
+# probes as unresolved and inherits another provider's ceiling.
+session=$(cat /proc/sys/kernel/random/uuid)
+export session
 probe() {
   set -- $1
   id=$1; want=$2
   b=$(curl -sS --max-time 90 -X POST https://llm.int.exe.xyz/v1/chat/completions \
     -H 'content-type: application/json' \
+    -H "x-opencode-session: $session" \
+    -H 'x-opencode-client: probe-gateway-limits' \
     -d "$(jq -nc --arg m "$id" --argjson t "$want" '{model:$m,max_tokens:$t,messages:[{role:"user",content:"hi"}]}')" 2>&1)
   printf '%s\\t%s\\t%s\\n' "$id" "$want" "$(printf '%s' "$b" | tr '\\n' ' ')"
 }

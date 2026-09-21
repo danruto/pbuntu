@@ -646,11 +646,13 @@ test("supplies opencode-go windows the live catalog cannot", () => {
 	// opencode-go has neither `limits` nor a usable `upstream`, so these come
 	// from the probed table.
 	assert.equal(windowFor("exe-dev-opencode-go", "glm-5.3"), 1000000);
-	// Providers disagreed on these two; the lower value is the one we take.
 	assert.equal(windowFor("exe-dev-opencode-go", "minimax-m3"), 512000);
-	assert.equal(windowFor("exe-dev-opencode-go", "qwen3.7-plus"), 262144);
-	// No counterpart in any provider, so the default is the only answer left.
-	assert.equal(windowFor("exe-dev-opencode-go", "longcat-2.0"), 128000);
+	// Both of these were once a stand-in — the lowest window another provider
+	// confirmed for qwen3.7-plus, the bare default for longcat — because every
+	// opencode-go probe was rejected for a missing session header before it
+	// reached max_tokens. They are the route's own measured windows now.
+	assert.equal(windowFor("exe-dev-opencode-go", "qwen3.7-plus"), 1000000);
+	assert.equal(windowFor("exe-dev-opencode-go", "longcat-2.0"), 1048576);
 });
 
 test("takes a probed window over the upstream passthrough's claim", () => {

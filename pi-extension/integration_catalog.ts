@@ -463,7 +463,7 @@ function gatewayModelCapabilities(provider: string, modelID: string) {
 // request instead of rejecting it, so guessing high corrupts answers silently
 // while guessing low only wastes budget.
 //
-// 73 of 96 models resolved against pb-base.exe.xyz.
+// 76 of 102 models resolved against exedev@dev-rust-bun.exe.xyz.
 //
 // Exported for scripts/gen-cmd-providers.mjs, which bakes the same ceilings
 // into cmd's providers.json.
@@ -480,7 +480,10 @@ export const PROBED_LIMITS: ReadonlyMap<
 	["commandai\0Qwen/Qwen3.7-Plus", { maxTokens: 131072 }],
 	["commandai\0Qwen/Qwen3.8-Flash", { maxTokens: 131072 }],
 	["commandai\0Qwen/Qwen3.8-Max", { maxTokens: 131072 }],
+	["commandai\0Qwen/Qwen3.8-Max-0902", { maxTokens: 131072 }],
+	["commandai\0Qwen/Qwen3.8-Omni-Flash", { maxTokens: 131072 }],
 	["commandai\0claude-fable-5", { maxTokens: 128000 }],
+	["commandai\0claude-fable-5-1", { maxTokens: 128000 }],
 	["commandai\0claude-haiku-4-5-20251001", { maxTokens: 64000 }],
 	["commandai\0claude-opus-4-7", { maxTokens: 128000 }],
 	["commandai\0claude-opus-4-8", { maxTokens: 128000 }],
@@ -490,6 +493,7 @@ export const PROBED_LIMITS: ReadonlyMap<
 	["commandai\0deepseek/deepseek-v4-flash", { maxTokens: 393216 }],
 	["commandai\0deepseek/deepseek-v4-flash-vision-exp", { maxTokens: 393216 }],
 	["commandai\0deepseek/deepseek-v4-pro", { maxTokens: 393216 }],
+	["commandai\0deepseek/deepseek-v4.1-flash", { maxTokens: 393216 }],
 	["commandai\0gpt-5.3-codex", { maxTokens: 128000 }],
 	["commandai\0gpt-5.4", { maxTokens: 128000 }],
 	["commandai\0gpt-5.4-mini", { maxTokens: 128000 }],
@@ -497,8 +501,7 @@ export const PROBED_LIMITS: ReadonlyMap<
 	["commandai\0gpt-5.6-luna", { maxTokens: 128000 }],
 	["commandai\0gpt-5.6-sol", { maxTokens: 128000 }],
 	["commandai\0gpt-5.6-terra", { maxTokens: 128000 }],
-	["commandai\0minimax/minimax-m2.7-free", { maxTokens: 196608 }],
-	["commandai\0minimax/minimax-m3-free", { maxTokens: 524288 }],
+	["commandai\0meituan/LongCat-2.0", { maxTokens: 131072 }],
 	["commandai\0moonshotai/Kimi-K2.6", { maxTokens: 16384 }],
 	["commandai\0moonshotai/Kimi-K2.7-Code", { maxTokens: 256000 }],
 	["commandai\0moonshotai/Kimi-K3", { maxTokens: 1000000 }],
@@ -513,56 +516,58 @@ export const PROBED_LIMITS: ReadonlyMap<
 	["commandai\0z-ai/glm-5.3-flash", { maxTokens: 131072 }],
 	["commandai\0zai-org/GLM-5.2", { maxTokens: 131072 }],
 	["commandai\0zai-org/GLM-5.3", { maxTokens: 131072 }],
+	["opencode-go\0deepseek-flash", { maxTokens: 128000 }],
 	["opencode-go\0deepseek-v4-flash", { contextWindow: 1000000, maxTokens: 393216 }],
 	["opencode-go\0deepseek-v4-flash-vision-exp", { contextWindow: 1000000, maxTokens: 393216 }],
 	["opencode-go\0deepseek-v4-pro", { contextWindow: 1000000, maxTokens: 393216 }],
-	["opencode-go\0glm-5", { contextWindow: 200000 }],
+	["opencode-go\0deepseek-v4.1-flash", { contextWindow: 1000000, maxTokens: 393216 }],
 	["opencode-go\0glm-5.1", { contextWindow: 200000 }],
 	["opencode-go\0glm-5.2", { contextWindow: 1000000, maxTokens: 131072 }],
 	["opencode-go\0glm-5.3", { contextWindow: 1000000, maxTokens: 131072 }],
 	["opencode-go\0glm-5.3-flash", { contextWindow: 1048576, maxTokens: 131072 }],
 	["opencode-go\0gpt-5.6-luna", { contextWindow: 1050000, maxTokens: 128000 }],
-	["opencode-go\0grok-4.5", { contextWindow: 500000, maxTokens: 30000 }],
 	["opencode-go\0grok-4.6", { contextWindow: 500000, maxTokens: 30000 }],
 	["opencode-go\0hy3", { contextWindow: 262144 }],
 	["opencode-go\0hy4-preview", { contextWindow: 1048576 }],
-	["opencode-go\0kimi-k2.5", { contextWindow: 262144 }],
 	["opencode-go\0kimi-k2.6", { contextWindow: 262144, maxTokens: 16384 }],
 	["opencode-go\0kimi-k2.7-code", { contextWindow: 256000, maxTokens: 256000 }],
 	["opencode-go\0kimi-k3", { contextWindow: 1000000, maxTokens: 1000000 }],
-	["opencode-go\0longcat-2.0", { maxTokens: 128000 }],
-	["opencode-go\0mimo-v2.5", { contextWindow: 1000000, maxTokens: 131072 }],
+	["opencode-go\0longcat-2.0", { contextWindow: 1048576, maxTokens: 131072 }],
+	["opencode-go\0mimo-v2.5", { contextWindow: 1048576, maxTokens: 131072 }],
 	["opencode-go\0mimo-v2.5-pro", { contextWindow: 1000000, maxTokens: 131072 }],
 	["opencode-go\0minimax-m2.5", { contextWindow: 204800 }],
-	["opencode-go\0minimax-m2.7", { contextWindow: 197000, maxTokens: 196608 }],
+	["opencode-go\0minimax-m2.7", { contextWindow: 200000, maxTokens: 196608 }],
 	["opencode-go\0minimax-m3", { contextWindow: 512000, maxTokens: 512000 }],
 	["opencode-go\0muse-spark-1.2-contributor", { contextWindow: 1048576 }],
-	["opencode-go\0qwen3.5-plus", { maxTokens: 65536 }],
+	["opencode-go\0muse-spark-1.3-contributor", { contextWindow: 1048576 }],
+	["opencode-go\0omen-alpha", { maxTokens: 128000 }],
 	["opencode-go\0qwen3.6-plus", { contextWindow: 200000, maxTokens: 65536 }],
 	["opencode-go\0qwen3.7-max", { contextWindow: 1000000, maxTokens: 131072 }],
-	["opencode-go\0qwen3.7-plus", { contextWindow: 262144, maxTokens: 131072 }],
+	["opencode-go\0qwen3.7-plus", { contextWindow: 1000000, maxTokens: 131072 }],
 	["opencode-go\0qwen3.8-flash", { contextWindow: 1000000, maxTokens: 131072 }],
 	["opencode-go\0qwen3.8-max", { contextWindow: 1000000, maxTokens: 131072 }],
 	["xai\0grok-4.6", { maxTokens: 30000 }],
 ]);
 
-// The remaining 23 gateway models keep the defaults. Some accept any
+// The remaining 26 gateway models keep the defaults. Some accept any
 // max_tokens and clamp in silence, so their real ceiling never surfaces; the
 // rest are off-plan, wrong-protocol, or unavailable, and cannot be asked:
-//   commandai/MiniMaxAI/MiniMax-M2.5 (clamps),
-//   commandai/Qwen/Qwen3.8-27B (clamps),
+//   commandai/MiniMaxAI/MiniMax-M2.5, commandai/Qwen/Qwen3.8-27B (clamps),
+//   commandai/deepseek/deepseek-v4-flash-fast (clamps),
 //   commandai/google/gemini-3.1-flash-lite, commandai/google/gemini-3.5-flash,
 //   commandai/google/gemini-3.5-flash-lite, commandai/google/gemini-3.6-flash,
-//   commandai/google/gemini-3.7-flash, commandai/meta/muse-spark-1.1,
-//   commandai/meta/muse-spark-1.2, commandai/meta/muse-spark-1.2-contributor,
-//   commandai/moonshotai/Kimi-K2.5 (clamps),
+//   commandai/google/gemini-3.7-flash, commandai/google/gemini-3.8-flash,
+//   commandai/inclusionai/ling-3.0-flash-sante:free,
+//   commandai/meta/muse-spark-1.1, commandai/meta/muse-spark-1.2,
+//   commandai/meta/muse-spark-1.2-contributor, commandai/meta/muse-spark-1.3,
+//   commandai/meta/muse-spark-1.3-contributor, commandai/moonshotai/Kimi-K2.5,
 //   commandai/moonshotai/Kimi-K2.7-Code-Highspeed (clamps),
 //   commandai/nvidia/nemotron-3-ultra-550b-a55b (clamps),
-//   commandai/sakana/fugu-ultra, commandai/stepfun/Step-3.7-Flash,
-//   commandai/tencent/hy3-paid, commandai/tencent/hy4-preview,
-//   commandai/zai-org/GLM-5 (clamps), commandai/zai-org/GLM-5.1 (clamps),
-//   commandai/zai-org/GLM-5.2-Fast (clamps), opencode-go/hy3-preview,
-//   opencode-go/mimo-v2-omni, opencode-go/mimo-v2-pro
+//   commandai/sakana/fugu-ultra, commandai/stepfun/Step-3.7-Flash (clamps),
+//   commandai/tencent/hy3-paid, commandai/tencent/hy4-preview (clamps),
+//   commandai/z-ai/glm-5.3-flashx, commandai/zai-org/GLM-5,
+//   commandai/zai-org/GLM-5.1 (clamps),
+//   commandai/zai-org/GLM-5.2-Fast (clamps)
 
 function positiveLimit(value: number | undefined): number | undefined {
 	return typeof value === "number" && Number.isFinite(value) && value > 0
