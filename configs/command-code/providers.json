@@ -99,6 +99,10 @@
           "contextWindow": 1000000,
           "maxOutput": 128000
         },
+        "claude-opus-5-5": {
+          "name": "Claude Opus 5.5",
+          "contextWindow": 1000000
+        },
         "claude-sonnet-4-6": {
           "name": "Claude Sonnet 4.6",
           "contextWindow": 1000000,
@@ -192,6 +196,18 @@
           "contextWindow": 1050000,
           "maxOutput": 128000
         },
+        "gpt-6-astra": {
+          "name": "GPT-6 Astra",
+          "contextWindow": 1050000
+        },
+        "gpt-6-luna": {
+          "name": "GPT-6 Luna",
+          "contextWindow": 1050000
+        },
+        "gpt-6-sol": {
+          "name": "GPT-6 Sol",
+          "contextWindow": 1050000
+        },
         "inclusionai/ling-3.0-flash-sante:free": {
           "name": "Ling 3.0 Flash Sante",
           "contextWindow": 262144
@@ -257,6 +273,10 @@
           "name": "Fugu Ultra",
           "contextWindow": 1000000
         },
+        "stealth/space-bunny-alpha": {
+          "name": "Space Bunny Alpha",
+          "contextWindow": 1000000
+        },
         "stepfun/Step-3.5-Flash": {
           "name": "Step 3.5 Flash",
           "contextWindow": 262144
@@ -264,6 +284,10 @@
         "stepfun/Step-3.7-Flash": {
           "name": "Step 3.7 Flash",
           "contextWindow": 256000
+        },
+        "stepfun/Step-5-Preview": {
+          "name": "Step 5 Preview",
+          "contextWindow": 1000000
         },
         "tencent/hy3-paid": {
           "name": "Tencent Hy3",
@@ -293,6 +317,10 @@
           "contextWindow": 500000,
           "maxOutput": 30000
         },
+        "xai/grok-4.7": {
+          "name": "Grok 4.7",
+          "contextWindow": 500000
+        },
         "xiaomi/mimo-v2.5": {
           "name": "MiMo V2.5",
           "contextWindow": 1000000,
@@ -302,6 +330,18 @@
           "name": "MiMo V2.5 Pro",
           "contextWindow": 1000000,
           "maxOutput": 131072
+        },
+        "xiaomi/mimo-v2.6-flash": {
+          "name": "MiMo V2.6 Flash",
+          "contextWindow": 1048576
+        },
+        "xiaomi/mimo-v2.6-pro": {
+          "name": "MiMo V2.6 Pro",
+          "contextWindow": 1048576
+        },
+        "xiaomi/mimo-v2.6-pro-ultraspeed": {
+          "name": "MiMo V2.6 Pro UltraSpeed",
+          "contextWindow": 1048576
         },
         "z-ai/glm-5.3-flash": {
           "name": "GLM-5.3 Flash",
