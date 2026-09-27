@@ -273,6 +273,10 @@
           "name": "Fugu Ultra",
           "contextWindow": 1000000
         },
+        "stealth/pixel-canary": {
+          "name": "Pixel Canary",
+          "contextWindow": 262144
+        },
         "stealth/space-bunny-alpha": {
           "name": "Space Bunny Alpha",
           "contextWindow": 1000000

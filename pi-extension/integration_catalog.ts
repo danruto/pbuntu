@@ -125,6 +125,7 @@ type CompatBag = {
 		| "qwen"
 		| "qwen-chat-template";
 	cacheControlFormat?: "anthropic";
+	requiresReasoningContentOnAssistantMessages?: boolean;
 };
 
 export type JSONFetcher = (url: string) => Promise<unknown | undefined>;
@@ -441,13 +442,34 @@ const GATEWAY_GPT56_THINKING_LEVEL_MAP = {
 	max: "xhigh",
 } as const;
 
-function gatewayModelCapabilities(provider: string, modelID: string) {
-	if (provider !== "openai" || !/^gpt-5\.6-(?:sol|terra|luna)$/.test(modelID))
-		return undefined;
-	return {
-		reasoning: true,
-		thinkingLevelMap: GATEWAY_GPT56_THINKING_LEVEL_MAP,
-	};
+// DeepSeek thinks unless told not to, and rejects a follow-up request whose
+// earlier assistant turns lack reasoning_content. pi-ai pads those turns only
+// when it recognises DeepSeek by provider id or deepseek.com, which no exe.dev
+// route matches, so the same DeepSeek compat is applied here by model id.
+const DEEPSEEK_COMPAT: CompatBag = {
+	thinkingFormat: "deepseek",
+	requiresReasoningContentOnAssistantMessages: true,
+};
+
+function gatewayModelCapabilities(
+	provider: string,
+	modelID: string,
+	piAPI: IntegrationAPIAdapter["piAPI"],
+):
+	| {
+			reasoning: true;
+			thinkingLevelMap?: CatalogModel["thinkingLevelMap"];
+			compat?: CompatBag;
+	  }
+	| undefined {
+	if (provider === "openai" && /^gpt-5\.6-(?:sol|terra|luna)$/.test(modelID))
+		return {
+			reasoning: true,
+			thinkingLevelMap: GATEWAY_GPT56_THINKING_LEVEL_MAP,
+		};
+	if (piAPI === "openai-completions" && /deepseek/i.test(modelID))
+		return { reasoning: true, compat: DEEPSEEK_COMPAT };
+	return undefined;
 }
 
 // Real context and output ceilings for the models exe.dev ships incomplete
@@ -591,8 +613,16 @@ function configFromIntegrationModel(
 
 	const modelID = integrationModelID(model);
 	if (!modelID) return undefined;
-	const compat = sanitizeCompat(fallback?.compat, model.provider, modelID);
-	const gatewayCapabilities = gatewayModelCapabilities(model.provider, modelID);
+	const gatewayCapabilities = gatewayModelCapabilities(
+		model.provider,
+		modelID,
+		adapter.piAPI,
+	);
+	const catalogCompat = sanitizeCompat(fallback?.compat, model.provider, modelID);
+	const compat =
+		gatewayCapabilities?.compat || catalogCompat
+			? { ...gatewayCapabilities?.compat, ...catalogCompat }
+			: undefined;
 	const probed = PROBED_LIMITS.get(`${model.provider}\0${modelID}`);
 	return {
 		id: modelID,

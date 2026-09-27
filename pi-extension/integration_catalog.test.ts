@@ -234,6 +234,38 @@ test("enables full Pi thinking levels for gateway GPT-5.6 variants", () => {
 	assert.equal(model.thinkingLevelMap?.max, "xhigh");
 });
 
+test("gives DeepSeek chat routes pi's DeepSeek thinking compat", () => {
+	const infos = providerInfosFromIntegrationCatalogs(
+		[
+			{
+				name: "llm",
+				baseURL: "https://llm.int.exe.xyz",
+				catalog: {
+					schema_version: 1,
+					models: [
+						customModel("opencode-go", "deepseek-v4.1-flash", ["openai_chat"]),
+						customModel("opencode-go", "glm-5.3", ["openai_chat"]),
+					],
+				},
+			},
+		],
+		undefined,
+		() => {},
+	);
+
+	const models = infos.get("exe-dev-opencode-go")?.config.models ?? [];
+	const deepseek = models.find((m) => m.id.startsWith("deepseek-v4.1-flash"));
+	assert.ok(deepseek);
+	assert.equal(deepseek.reasoning, true);
+	assert.deepEqual(deepseek.compat, {
+		thinkingFormat: "deepseek",
+		requiresReasoningContentOnAssistantMessages: true,
+	});
+	const glm = models.find((m) => m.id.startsWith("glm-5.3"));
+	assert.ok(glm);
+	assert.equal(glm.compat, undefined);
+});
+
 test("namespaces reflected xAI models and never creates routes from pricing metadata", () => {
 	const pricingCatalog: Catalog = {
 		schemaVersion: 1,
