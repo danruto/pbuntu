@@ -101,7 +101,8 @@
         },
         "claude-opus-5-5": {
           "name": "Claude Opus 5.5",
-          "contextWindow": 1000000
+          "contextWindow": 1000000,
+          "maxOutput": 128000
         },
         "claude-sonnet-4-6": {
           "name": "Claude Sonnet 4.6",
@@ -110,6 +111,11 @@
         },
         "claude-sonnet-5": {
           "name": "Claude Sonnet 5",
+          "contextWindow": 1000000,
+          "maxOutput": 128000
+        },
+        "claude-sonnet-5-5": {
+          "name": "Claude Sonnet 5.5",
           "contextWindow": 1000000,
           "maxOutput": 128000
         },
@@ -136,6 +142,11 @@
           "name": "DeepSeek V4.1 Flash",
           "contextWindow": 1000000,
           "maxOutput": 393216
+        },
+        "deepseek/deepseek-v4.1-flash-fast": {
+          "name": "DeepSeek V4.1 Flash Fast",
+          "contextWindow": 1000000,
+          "maxOutput": 32768
         },
         "google/gemini-3.1-flash-lite": {
           "name": "Gemini 3.1 Flash Lite",
@@ -198,19 +209,32 @@
         },
         "gpt-6-astra": {
           "name": "GPT-6 Astra",
-          "contextWindow": 1050000
+          "contextWindow": 1050000,
+          "maxOutput": 128000
         },
         "gpt-6-luna": {
           "name": "GPT-6 Luna",
-          "contextWindow": 1050000
+          "contextWindow": 1050000,
+          "maxOutput": 128000
         },
         "gpt-6-sol": {
           "name": "GPT-6 Sol",
-          "contextWindow": 1050000
+          "contextWindow": 1050000,
+          "maxOutput": 128000
+        },
+        "gpt-6.1-sol": {
+          "name": "GPT-6.1 Sol",
+          "contextWindow": 1050000,
+          "maxOutput": 128000
         },
         "inclusionai/ling-3.0-flash-sante:free": {
           "name": "Ling 3.0 Flash Sante",
           "contextWindow": 262144
+        },
+        "inclusionai/ling-3.1-flash:free": {
+          "name": "Ling 3.1 Flash",
+          "contextWindow": 262144,
+          "maxOutput": 32768
         },
         "meituan/LongCat-2.0": {
           "name": "LongCat 2.0",
@@ -279,7 +303,8 @@
         },
         "stealth/space-bunny-alpha": {
           "name": "Space Bunny Alpha",
-          "contextWindow": 1000000
+          "contextWindow": 1000000,
+          "maxOutput": 524288
         },
         "stepfun/Step-3.5-Flash": {
           "name": "Step 3.5 Flash",
@@ -323,7 +348,8 @@
         },
         "xai/grok-4.7": {
           "name": "Grok 4.7",
-          "contextWindow": 500000
+          "contextWindow": 500000,
+          "maxOutput": 65536
         },
         "xiaomi/mimo-v2.5": {
           "name": "MiMo V2.5",
@@ -337,15 +363,18 @@
         },
         "xiaomi/mimo-v2.6-flash": {
           "name": "MiMo V2.6 Flash",
-          "contextWindow": 1048576
+          "contextWindow": 1048576,
+          "maxOutput": 131072
         },
         "xiaomi/mimo-v2.6-pro": {
           "name": "MiMo V2.6 Pro",
-          "contextWindow": 1048576
+          "contextWindow": 1048576,
+          "maxOutput": 131072
         },
         "xiaomi/mimo-v2.6-pro-ultraspeed": {
           "name": "MiMo V2.6 Pro UltraSpeed",
-          "contextWindow": 1048576
+          "contextWindow": 1048576,
+          "maxOutput": 131072
         },
         "z-ai/glm-5.3-flash": {
           "name": "GLM-5.3 Flash",

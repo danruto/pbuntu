@@ -61,6 +61,15 @@ const MANUAL_MAX_TOKENS = new Map([
 	["laguna-s-2.1", 32768],
 	["mimo-v2.5", 131072],
 	["mimo-v2.5-pro", 131072],
+	// No route has answered a probe for these yet, so each value is the lowest
+	// output limit any provider publishes on models.dev. It lists no commandai
+	// entries, so for grok-4.7 that is ofox's 65536, well under the 500000
+	// opencode-go publishes, and for deepseek-v4.1-flash-fast it is baseten's.
+	["space-bunny", 524288],
+	["space-bunny-alpha", 524288],
+	["deepseek-v4.1-flash-fast", 32768],
+	["grok-4.7", 65536],
+	["mimo-v2.6-pro-ultraspeed", 131072],
 ]);
 
 // Every distinct phrasing the upstreams behind commandai and opencode-go use to
