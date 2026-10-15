@@ -201,7 +201,7 @@ RUN ARCH=$(uname -m) && \
 #
 # The version check fails the build on a drifted installer rather than baking a
 # herdr the control plane has not been read against.
-ARG HERDR_VERSION=0.9.3
+ARG HERDR_VERSION=0.9.5
 RUN curl -fsSL https://herdr.dev/install.sh | sh && \
     mv "$HOME/.local/bin/herdr" /usr/local/bin/herdr && \
     chmod 0755 /usr/local/bin/herdr && \
