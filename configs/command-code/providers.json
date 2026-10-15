@@ -64,6 +64,10 @@
           "contextWindow": 1000000,
           "maxOutput": 131072
         },
+        "Qwen/Qwen3.8-Max-Prime": {
+          "name": "Qwen 3.8 Max Prime",
+          "contextWindow": 1000000
+        },
         "Qwen/Qwen3.8-Omni-Flash": {
           "name": "Qwen 3.8 Omni Flash",
           "contextWindow": 1000000,
@@ -83,6 +87,10 @@
           "name": "Claude Haiku 4.5",
           "contextWindow": 200000,
           "maxOutput": 64000
+        },
+        "claude-haiku-5-5": {
+          "name": "Claude Haiku 5.5",
+          "contextWindow": 1000000
         },
         "claude-opus-4-7": {
           "name": "Claude Opus 4.7",
@@ -172,6 +180,10 @@
           "name": "Gemini 3.8 Flash",
           "contextWindow": 1000000
         },
+        "google/gemini-4-argon": {
+          "name": "Gemini 4 Argon",
+          "contextWindow": 1000000
+        },
         "gpt-5.3-codex": {
           "name": "GPT-5.3 Codex",
           "contextWindow": 400000,
@@ -231,10 +243,9 @@
           "name": "Ling 3.0 Flash Sante",
           "contextWindow": 262144
         },
-        "inclusionai/ling-3.1-flash:free": {
+        "inclusionai/ling-3.1-flash": {
           "name": "Ling 3.1 Flash",
-          "contextWindow": 262144,
-          "maxOutput": 32768
+          "contextWindow": 262144
         },
         "meituan/LongCat-2.0": {
           "name": "LongCat 2.0",
@@ -260,6 +271,14 @@
         "meta/muse-spark-1.3-contributor": {
           "name": "Muse Spark 1.3 Contributor",
           "contextWindow": 1048576
+        },
+        "meta/muse-wonder-1.0": {
+          "name": "Muse Wonder",
+          "contextWindow": 1048576
+        },
+        "mistral/mistral-large-4": {
+          "name": "Mistral Large 4",
+          "contextWindow": 524288
         },
         "moonshotai/Kimi-K2.5": {
           "name": "Kimi K2.5",
@@ -297,14 +316,9 @@
           "name": "Fugu Ultra",
           "contextWindow": 1000000
         },
-        "stealth/pixel-canary": {
-          "name": "Pixel Canary",
-          "contextWindow": 262144
-        },
-        "stealth/space-bunny-alpha": {
-          "name": "Space Bunny Alpha",
-          "contextWindow": 1000000,
-          "maxOutput": 524288
+        "stealth/glyph-cluster:free": {
+          "name": "Glyph Cluster",
+          "contextWindow": 256000
         },
         "stepfun/Step-3.5-Flash": {
           "name": "Step 3.5 Flash",
