@@ -9,7 +9,7 @@
 #
 # Build:  make build-dev TOOLCHAINS=rust,bun
 #
-FROM docker.io/library/golang:1.27.1 AS exeuntu-cli
+FROM docker.io/library/golang:1.27.3 AS exeuntu-cli
 ARG EXEUNTU_GIT_VERSION=unknown
 WORKDIR /src/exeuntu-cli
 COPY cli/ ./
