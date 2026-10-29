@@ -84,6 +84,5 @@ assert_topology() {
 }
 
 assert_topology "$home/.pi/agent/skills/pb-skills" pi
-assert_topology "$home/.commandcode/skills/pb-skills" "Command Code"
 
-printf 'ok -- agent-config-sync publishes pi and Command Code topologies whose outward paths resolve\n'
+printf 'ok -- agent-config-sync publishes pi topologies whose outward paths resolve\n'

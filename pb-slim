@@ -6,7 +6,7 @@
 #   pb-slim playwright    remove those groups
 #
 # Only self-contained installs are listed. Anything wired into systemd or into a
-# coding agent (pi, command-code, herdr) stays.
+# coding agent (pi, herdr, herdr-core) stays.
 set -eu
 
 paths() {

@@ -21,7 +21,7 @@ Nothing else: no language toolchains, no coding agents. It boots with `tailscale
 ## Dev
 
 The base plus what a coding agent needs: node (as a harness dependency, not a toolchain), Claude
-Code, pi with its extensions, Command Code with the `cmd-acp` bridge, the herdr server the
+Code, pi with its extensions, the herdr and herdr-core runtimes the
 control plane dispatches through, and the Amp CLI (pinned, self-update off), which the control
 plane runs as an Amp runner on a machine whose projects declare the supplemental `amp` toolchain. Language toolchains come from the `TOOLCHAINS` build arg, a
 comma-separated subset of `go,rust,bun,python`, and the tag names the set the way the control plane names

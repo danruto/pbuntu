@@ -139,11 +139,6 @@ install_pi_skills() {
     publish_skills "$1" "$HOME/.pi/agent/skills/$2"
 }
 
-# Command Code reads the same shape from its own root.
-install_cmd_skills() {
-    publish_skills "$1" "$HOME/.commandcode/skills/$2"
-}
-
 read -ra repos <<<"${AGENT_CONFIG_REPOS:-}"
 for repo in "${repos[@]}"; do
     name=$(basename "$repo")
@@ -156,7 +151,6 @@ for repo in "${repos[@]}"; do
 
     install_claude_plugins "$dest" || fail "installing $repo's Claude Code plugins failed"
     install_pi_skills "$dest" "$name" || fail "installing $repo's skills for pi failed"
-    install_cmd_skills "$dest" "$name" || fail "installing $repo's skills for Command Code failed"
 
     # First repository carrying the file wins, so the list's order decides which
     # instructions are the global ones when more than one could answer.

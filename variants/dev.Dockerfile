@@ -4,8 +4,8 @@
 # compilers its projects use and nothing it would only ever delete.
 #
 # Everything a coding agent needs rides on top of the base: node for the
-# harnesses that are npm packages, Claude Code, pi, Command Code with its ACP
-# bridge, and the herdr server the control plane dispatches through.
+# harnesses that are npm packages, Claude Code, pi, and the two herdr runtimes
+# the control plane dispatches through.
 #
 # Build:  make build-dev TOOLCHAINS=rust,bun
 #
@@ -33,8 +33,8 @@ RUN apt-get update && \
 
 COPY --from=exeuntu-cli /out/exeuntu /usr/local/bin/exeuntu
 
-# Node is a harness dependency, not a project toolchain: pi and command-code
-# are npm packages. herdr is a static binary and needs none of it.
+# Node is a harness dependency, not a project toolchain: pi is an npm package.
+# herdr and herdr-core are static binaries and need none of it.
 # Keep npm's global prefix user-writable: pi's self-updater runs as exedev.
 RUN ARCH="$(uname -m)" && \
     case "${ARCH}" in x86_64) NODE_ARCH=x64 ;; aarch64|arm64) NODE_ARCH=arm64 ;; *) echo "Unsupported architecture: ${ARCH}" && exit 1 ;; esac && \
@@ -207,6 +207,30 @@ RUN curl -fsSL https://herdr.dev/install.sh | sh && \
     chmod 0755 /usr/local/bin/herdr && \
     /usr/local/bin/herdr --version | grep -qF "${HERDR_VERSION}"
 
+# herdr-core — the runtime behind the control plane's second adapter. One static
+# binary as well, taken from the release manifest's published digest rather than
+# its installer so the pin here is the pin the fleet syncs to. It is moved to a
+# system prefix for herdr's reason: the control plane drives it over a
+# non-interactive ssh whose PATH is systemd's. Its own state comes last in the
+# path, so `hc` answers the pinned build and not whatever an operator installed.
+#
+# Nothing starts it here. The control plane's first call starts the core, and a
+# core that is already running would hold an image-baked binary the next bump
+# cannot replace.
+ARG HERDR_CORE_VERSION=0.1.14
+RUN set -eux; \
+    case "$(uname -m)" in x86_64) t=linux-x86_64 ;; aarch64) t=linux-aarch64 ;; *) exit 1 ;; esac; \
+    curl -fsSL "https://releases.herdr.dev/core/${HERDR_CORE_VERSION}/manifest.json" -o /tmp/hc.json; \
+    url=$(jq -r --arg t "$t" '.targets[$t].url' /tmp/hc.json); \
+    want=$(jq -r --arg t "$t" '.targets[$t].sha256' /tmp/hc.json); \
+    curl -fsSL "$url" -o /tmp/hc.tar.gz; \
+    printf '%s  %s\n' "$want" /tmp/hc.tar.gz | sha256sum -c -; \
+    tar -xzf /tmp/hc.tar.gz -C /usr/local/bin herdr-core; \
+    chmod 0755 /usr/local/bin/herdr-core; \
+    ln -sfn herdr-core /usr/local/bin/hc; \
+    rm -f /tmp/hc.json /tmp/hc.tar.gz; \
+    /usr/local/bin/hc --version | grep -qF "${HERDR_CORE_VERSION}"
+
 # Detection manifests are fetched from herdr.dev at runtime and applied without
 # a restart, so an unpinned fleet can change how it classifies an agent between
 # one dispatch and the next. The control plane branches on those states, so the
@@ -233,41 +257,6 @@ RUN curl -fsSL https://ampcode.com/install.sh | \
     mkdir -p /home/exedev/.config/amp && \
     printf '%s\n' '{"amp.updates.mode": "disabled"}' > /home/exedev/.config/amp/settings.json && \
     chown -R exedev:exedev /home/exedev/.config/amp
-
-# Command Code, pinned. Installed into the user prefix so its self-updater
-# works without sudo; the symlinks keep it on the default PATH for systemd.
-USER exedev
-RUN --mount=type=cache,target=/home/exedev/.npm,uid=1000,gid=1000 \
-    npm install -g command-code@1.73.0 && \
-    /home/exedev/.local/bin/command-code --version
-
-# BYOK provider config: the exe.dev LLM gateway, keyless inside exe.dev VMs.
-# The default model must carry the provider prefix, or cmd resolves it against
-# its own catalog and refuses it under localOnly.
-COPY --chown=exedev:exedev configs/command-code/providers.json /home/exedev/.commandcode/providers.json
-RUN printf '%s\n' '{"localOnly": true, "model": "exe-llm/deepseek/deepseek-v4-flash"}' > /home/exedev/.commandcode/config.json
-
-# pb-executor spawns cmd in non-interactive shells that return at .bashrc's
-# interactive guard, so the gateway key must sit above it.
-RUN sed -i '1i # exe.dev LLM gateway key for cmd (non-interactive shells)\nexport COMMAND_CODE_API_KEY=exe-gateway' /home/exedev/.bashrc && \
-    grep -q 'COMMAND_CODE_API_KEY' /home/exedev/.bashrc
-USER root
-RUN ln -sf /home/exedev/.local/bin/command-code /usr/local/bin/command-code && \
-    ln -sf /home/exedev/.local/bin/command-code /usr/local/bin/cmd
-
-# cmd-acp — the ACP bridge command-code is driven through. The whole
-# directory is copied because the bridge imports routing.mjs. The version pin
-# fails the build when the checkout's package.json has moved, rather than
-# silently baking a different bridge.
-ARG CMD_ACP_VERSION=0.2.1
-COPY cmd-acp/ /opt/cmd-acp/
-RUN --mount=type=cache,target=/root/.npm \
-    cd /opt/cmd-acp && \
-    node -e 'const v=require("/opt/cmd-acp/package.json").version; \
-      if (v !== process.argv[1]) { console.error(`cmd-acp version ${v} does not match pin ${process.argv[1]}`); process.exit(1) }' "$CMD_ACP_VERSION" && \
-    npm install --omit=dev --no-audit --no-fund && \
-    ln -sf /opt/cmd-acp/index.mjs /usr/local/bin/cmd-acp && \
-    chmod +x /usr/local/bin/cmd-acp
 
 # Interactive Claude runs its first-run wizard — theme picker, then a login
 # selector — on a machine where onboarding has never been marked complete, and
