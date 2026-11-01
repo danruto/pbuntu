@@ -54,7 +54,7 @@ RUN JUST_VERSION=$(curl -fsSL https://api.github.com/repos/casey/just/releases/l
 # hake (hako-edit) — a ~300 KB modal editor for fixing configs on the box. The
 # release checksum covers the extracted binary; the version check fails the
 # build on a drifted pin.
-ARG HAKE_VERSION=0.1.6
+ARG HAKE_VERSION=0.2.0
 RUN case "$(uname -m)" in x86_64) HAKE_ARCH=x86_64 ;; aarch64|arm64) HAKE_ARCH=arm64 ;; *) echo "Unsupported architecture: $(uname -m)" && exit 1 ;; esac && \
     HAKE_URL="https://github.com/mithraeums/hako-edit/releases/download/v${HAKE_VERSION}/hake-linux-${HAKE_ARCH}" && \
     TMPDIR=$(mktemp -d) && \

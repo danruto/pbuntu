@@ -90,7 +90,7 @@ USER root
 # The machine has no GPU: training runs on RunPod pods driven by runpodctl,
 # whose API key is set on the machine after boot (`runpodctl doctor`), never
 # baked. The version check fails the build on a moved release.
-ARG RUNPODCTL_VERSION=2.14.0
+ARG RUNPODCTL_VERSION=3.0.1
 RUN if [[ ",${TOOLCHAINS}," == *,python,* ]]; then \
         curl -LsSf https://astral.sh/uv/install.sh | \
             env UV_INSTALL_DIR=/usr/local/bin UV_NO_MODIFY_PATH=1 sh && \
@@ -217,7 +217,7 @@ RUN curl -fsSL https://herdr.dev/install.sh | sh && \
 # Nothing starts it here. The control plane's first call starts the core, and a
 # core that is already running would hold an image-baked binary the next bump
 # cannot replace.
-ARG HERDR_CORE_VERSION=0.1.14
+ARG HERDR_CORE_VERSION=0.1.16
 RUN set -eux; \
     case "$(uname -m)" in x86_64) t=linux-x86_64 ;; aarch64) t=linux-aarch64 ;; *) exit 1 ;; esac; \
     curl -fsSL "https://releases.herdr.dev/core/${HERDR_CORE_VERSION}/manifest.json" -o /tmp/hc.json; \
@@ -249,7 +249,7 @@ RUN mkdir -p /home/exedev/.config/herdr && \
 # version check fails the build on a pin the installer did not deliver. amp
 # updates itself in the background by default, so the settings file turns that
 # off and the fleet runs the version baked here.
-ARG AMP_VERSION=0.0.1790798464-g1c0876
+ARG AMP_VERSION=0.0.1793563244-geb1c10
 RUN curl -fsSL https://ampcode.com/install.sh | \
         env AMP_HOME=/opt/amp AMP_VERSION="${AMP_VERSION}" bash && \
     ln -sf /opt/amp/bin/amp /usr/local/bin/amp && \
